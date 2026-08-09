@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>シーザー記録</title>
+<base target="_top">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; overflow:hidden; background:#f4f6f8; }
+  iframe { border:none; width:100%; height:100%; display:block; }
+</style>
+</head>
+<body>
+  <iframe id="app" src="about:blank"></iframe>
+  <script>
+    // GASのWebアプリURL（末尾は /exec）
+    const GAS_APP_URL = 'https://script.google.com/macros/s/AKfycbzxDsgaXoAhbAzHx4s3RtcK6KyELSJFgs_kFzFtv00_79DD5FcxCNAsXZT7NYG_Ub6cyw/exec';
+    window.addEventListener('load', () => {
+      document.getElementById('app').src = GAS_APP_URL + window.location.search;
+    });
+  </script>
+</body>
+</html>
