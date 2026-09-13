@@ -120,7 +120,7 @@ function getLogsByDate_(dateStr) {
   if (lastRow < 2) return [];
   const lastCol = sh.getLastColumn();
   const h = headers_(sh);
-  const iDate = h.indexOf('日付'), iDow = h.indexOf('曜日'), iTime = h.indexOf('時刻'),
+  const iDatetime = h.indexOf('日時'), iDow = h.indexOf('曜日'),
         iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考'), iId = h.indexOf('ID');
   const target = dateStr || fmtDate_(new Date());
 
@@ -130,13 +130,13 @@ function getLogsByDate_(dateStr) {
   while (true) {
     const numRows = Math.min(chunk, lastRow - 1);
     values = sh.getRange(2, 1, numRows, lastCol).getValues();
-    const found = values.some(row => normDate_(row[iDate]) === target);
+    const found = values.some(row => normDate_(row[iDatetime]) === target);
     if (found || numRows === lastRow - 1) break; // 見つかった、またはシート全体を読みきった
 
     if (firstPass) {
       // シートは日時降順（上ほど新しい）に保たれているので、先頭行の日付より
       // 新しい日付を探している場合はこれ以上読んでも見つからない（＝まだデータなし）
-      const topDate = normDate_(values[0][iDate]);
+      const topDate = normDate_(values[0][iDatetime]);
       if (topDate && target > topDate) return [];
       firstPass = false;
     }
@@ -145,13 +145,13 @@ function getLogsByDate_(dateStr) {
 
   const out = [];
   for (let i = 0; i < values.length; i++) {
-    const d = normDate_(values[i][iDate]);
+    const d = normDate_(values[i][iDatetime]);
     if (d !== target) continue;
     out.push({
       id: String(values[i][iId] || ''),
       date: d,
       dow: String(values[i][iDow] || ''),
-      time: normTime_(values[i][iTime]),
+      time: normTime_(values[i][iDatetime]),
       action: String(values[i][iAct] || ''),
       note: String(values[i][iNote] || '')
     });
@@ -171,7 +171,7 @@ function getRecentLogs(n) {
   if (lastRow < 2) return [];
   const lastCol = sh.getLastColumn();
   const h = headers_(sh);
-  const iDate = h.indexOf('日付'), iDow = h.indexOf('曜日'), iTime = h.indexOf('時刻'),
+  const iDatetime = h.indexOf('日時'), iDow = h.indexOf('曜日'),
         iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考'), iId = h.indexOf('ID');
 
   const numRows = Math.min(n, lastRow - 1);
@@ -179,13 +179,13 @@ function getRecentLogs(n) {
 
   const out = [];
   for (let i = 0; i < values.length; i++) {
-    const d = normDate_(values[i][iDate]);
+    const d = normDate_(values[i][iDatetime]);
     if (!d) continue; // 空行はスキップ
     out.push({
       id: String(values[i][iId] || ''),
       date: d,
       dow: String(values[i][iDow] || ''),
-      time: normTime_(values[i][iTime]),
+      time: normTime_(values[i][iDatetime]),
       action: String(values[i][iAct] || ''),
       note: String(values[i][iNote] || '')
     });
@@ -214,15 +214,14 @@ function addLog(p) {
   if (!actionText) {
     return { ok: false, error: 'やったことを入力してください' };
   }
+  const timeStr = (p.time && p.time.trim()) ? normTime_(p.time.trim()) : fmtTimeNow_();
   const rowObj = {};
-  rowObj['日付'] = fmtDate_(dateObj);
   rowObj['曜日'] = dow_(dateObj);
-  rowObj['時刻'] = (p.time && p.time.trim()) ? normTime_(p.time.trim()) : fmtTimeNow_();
   rowObj['やったこと'] = actionText;
   rowObj['備考'] = p.note || '';
   rowObj['期間'] = periodOf_(dateObj);
   rowObj['ID'] = genId_();
-  rowObj['日時'] = combineDateTime_(rowObj['日付'], rowObj['時刻']);
+  rowObj['日時'] = combineDateTime_(fmtDate_(dateObj), timeStr);
   const row = h.map(name => (name in rowObj) ? rowObj[name] : '');
   sh.appendRow(row);
   sortLogSheet_();
@@ -235,18 +234,14 @@ function updateLog(id, p) {
   const sh = sheet_(SHEET_LOG);
   const values = sh.getDataRange().getValues();
   const h = values[0];
-  const iId = h.indexOf('ID'), iTime = h.indexOf('時刻'),
-        iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考'),
-        iDate = h.indexOf('日付'), iDatetime = h.indexOf('日時');
+  const iId = h.indexOf('ID'), iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考'),
+        iDatetime = h.indexOf('日時');
   for (let r = 1; r < values.length; r++) {
     if (String(values[r][iId]) === String(id)) {
       if (p.time !== undefined) {
         const newTime = normTime_(p.time);
-        sh.getRange(r + 1, iTime + 1).setValue(newTime);
-        if (iDatetime >= 0) {
-          const dStr = normDate_(values[r][iDate]);
-          sh.getRange(r + 1, iDatetime + 1).setValue(combineDateTime_(dStr, newTime));
-        }
+        const dStr = normDate_(values[r][iDatetime]);
+        sh.getRange(r + 1, iDatetime + 1).setValue(combineDateTime_(dStr, newTime));
       }
       if (p.action !== undefined) sh.getRange(r + 1, iAct + 1).setValue(p.action);
       if (p.note !== undefined) sh.getRange(r + 1, iNote + 1).setValue(p.note);
@@ -284,31 +279,6 @@ function sortLogSheet_() {
   sh.getRange(2, 1, lastRow - 1, lastCol).sort({ column: iDatetime + 1, ascending: false });
 }
 
-/**
- * 【1回だけ実行】シートに「日時」列を追加した後、既存の記録に日時を後付けで
- * 埋めるための関数。Apps Scriptエディタから手動で1回だけ実行してください
- * （実行後は自動で記録シートが日時の降順に並び替わります）。
- */
-function backfillDatetime() {
-  const sh = sheet_(SHEET_LOG);
-  const lastRow = sh.getLastRow();
-  if (lastRow < 2) return;
-  const lastCol = sh.getLastColumn();
-  const h = headers_(sh);
-  const iDate = h.indexOf('日付'), iTime = h.indexOf('時刻'), iDatetime = h.indexOf('日時');
-  if (iDatetime < 0) {
-    throw new Error('「日時」列が見つかりません。先にシートへ「日時」列を追加してください。');
-  }
-  const values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
-  for (let i = 0; i < values.length; i++) {
-    const dStr = normDate_(values[i][iDate]);
-    const tStr = normTime_(values[i][iTime]);
-    if (!dStr) continue;
-    values[i][iDatetime] = combineDateTime_(dStr, tStr);
-  }
-  sh.getRange(2, 1, values.length, lastCol).setValues(values);
-  sortLogSheet_();
-}
 
 /**
  * 指定期間（from〜to、ともに 'yyyy/MM/dd'）の記録を日付→時刻順で返す。
@@ -316,7 +286,7 @@ function backfillDatetime() {
  * 両方省略すると全期間を返す。
  */
 function getLogsRange(fromStr, toStr) {
-  // 単日指定（一覧タブの「日付」モード）は、getLogs と同じ「末尾から探す」
+  // 単日指定（一覧タブの「日付」モード）は、getLogsByDate_ と同じ「先頭から探す」
   // 高速ルートに乗せる。範囲指定・全期間のときだけシート全体を読む。
   if (fromStr && toStr && fromStr === toStr) {
     return getLogsByDate_(fromStr);
@@ -325,13 +295,13 @@ function getLogsRange(fromStr, toStr) {
   if (sh.getLastRow() < 2) return [];
   const values = sh.getDataRange().getValues();
   const h = values[0];
-  const iDate = h.indexOf('日付'), iDow = h.indexOf('曜日'), iTime = h.indexOf('時刻'),
+  const iDatetime = h.indexOf('日時'), iDow = h.indexOf('曜日'),
         iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考'), iId = h.indexOf('ID');
   const fromD = fromStr ? parseDate_(fromStr) : null;
   const toD = toStr ? parseDate_(toStr) : null;
   const out = [];
   for (let r = 1; r < values.length; r++) {
-    const dStr = normDate_(values[r][iDate]);
+    const dStr = normDate_(values[r][iDatetime]);
     if (!dStr) continue;
     const d = parseDate_(dStr);
     if (fromD && d < fromD) continue;
@@ -340,7 +310,7 @@ function getLogsRange(fromStr, toStr) {
       id: String(values[r][iId] || ''),
       date: dStr,
       dow: String(values[r][iDow] || ''),
-      time: normTime_(values[r][iTime]),
+      time: normTime_(values[r][iDatetime]),
       action: String(values[r][iAct] || ''),
       note: String(values[r][iNote] || '')
     });
