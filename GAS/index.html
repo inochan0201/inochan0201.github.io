@@ -1,0 +1,978 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>PW手帳</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --card: #fff;
+    --line: #e2e6ea;
+    --txt: #1f2d3d;
+    --sub: #6b7785;
+    --accent: #2e7d6b;
+    --accent2: #3a8ea0;
+    --danger: #c0563f;
+    --chip: #eef3f2;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    background: var(--bg);
+    color: var(--txt);
+    padding-bottom: 4.5rem;
+    font-size: 0.9375rem;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--accent);
+    color: #fff;
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+    font-size: 1.0625rem;
+    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, .15);
+  }
+  header small {
+    font-weight: 400;
+    opacity: .85;
+    font-size: 0.75rem;
+    margin-left: 0.375rem;
+  }
+  .view {
+    display: none;
+    padding: 0.875rem;
+  }
+  .view.active {
+    display: block;
+  }
+  .card {
+    background: var(--card);
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.875rem;
+    padding: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+  h2 {
+    font-size: 0.9375rem;
+    color: var(--txt);
+    margin: 0.125rem 0 1rem;
+    font-weight: 700;
+    border-left: 0.1875rem solid var(--accent);
+    padding-left: 0.5rem;
+  }
+  label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--sub);
+    font-weight: 800;
+    margin: 1.25rem 0 0.375rem;
+  }
+  label:first-of-type {
+    margin-top: 0.125rem;
+  }
+  .divider {
+    border-top: 0.0625rem solid var(--line);
+    margin: 1rem 0 0.25rem;
+  }
+  input, textarea, select {
+    width: 100%;
+    padding: 0.625rem;
+    border: 0.0625rem solid var(--line);
+    border-radius: 0.625rem;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    font-family: inherit;
+    background: #fff;
+    color: var(--txt);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input.invalid, textarea.invalid {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 0.1875rem rgba(192, 86, 63, .15);
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--sub);
+    opacity: 1;
+    font-weight: 400;
+  }
+  textarea {
+    resize: vertical;
+    min-height: 2.75rem;
+  }
+  .row {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .row > * {
+    flex: 1;
+    min-width: 0;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+  .chip {
+    padding: 0.5625rem 0.875rem;
+    border-radius: 62.4375rem;
+    background: var(--chip);
+    border: 0.0625rem solid var(--line);
+    font-size: 0.875rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .chip.on {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  button {
+    font-family: inherit;
+  }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 0.8125rem;
+    border: none;
+    border-radius: 0.75rem;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 0.75rem;
+  }
+  .btn.sub {
+    background: var(--accent2);
+  }
+  .btn.ghost {
+    background: #fff;
+    color: var(--accent);
+    border: 0.0625rem solid var(--accent);
+  }
+  .btn:active {
+    opacity: .85;
+  }
+  .btn.success {
+    background: #1f9d55;
+    transition: background .15s;
+  }
+  .btn:disabled {
+    opacity: .7;
+    cursor: default;
+  }
+  .logitem {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.625rem 0.25rem;
+    border-top: 0.0625rem solid var(--line);
+  }
+  .logitem:first-child {
+    border-top: none;
+  }
+  .logheader {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    margin-bottom: 0.375rem;
+    border-top: none;
+  }
+  .logheader .logtime {
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    min-width: 3.25rem;
+    padding-top: 0;
+  }
+  .logheader .logtime.wide {
+    min-width: 4.625rem;
+  }
+  .logheader .act {
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+  .logheader .h-actions {
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+  .logheader .logtime, .logheader .logbody {
+    border-right-color: rgba(255, 255, 255, .4);
+  }
+  .logtime {
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 3.25rem;
+    font-size: 0.875rem;
+    padding-top: 0.125rem;
+    border-right: 0.0625rem solid var(--line);
+    padding-right: 0.625rem;
+  }
+  .logtime.wide {
+    min-width: 4.625rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+  .logbody {
+    flex: 1;
+    border-right: 0.0625rem solid var(--line);
+    padding-right: 0.625rem;
+  }
+  .logbody .act {
+    font-weight: 600;
+  }
+  .logbody .note {
+    color: var(--sub);
+    font-size: 0.8125rem;
+    margin-top: 0.125rem;
+    white-space: pre-wrap;
+  }
+  .mini {
+    background: none;
+    border: none;
+    color: var(--sub);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    padding: 0.375rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+  }
+  .mini:hover, .mini:active {
+    background: var(--chip);
+  }
+  .mini.del {
+    color: var(--danger);
+  }
+  .datebar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .datebar input {
+    flex: 1;
+    min-width: 0;
+  }
+  .navbtn {
+    width: 2.5rem;
+    flex: none;
+    padding: 0.625rem 0;
+    border: 0.0625rem solid var(--line);
+    background: #fff;
+    border-radius: 0.625rem;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .empty {
+    color: var(--sub);
+    text-align: center;
+    padding: 1.125rem 0;
+    font-size: 0.875rem;
+  }
+  .qa {
+    border-top: 0.0625rem solid var(--line);
+    padding: 0.75rem 0.125rem;
+  }
+  .qa:first-child {
+    border-top: none;
+  }
+  .qa .q {
+    font-weight: 600;
+  }
+  .qa .qno {
+    color: var(--accent2);
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-right: 0.375rem;
+  }
+  .qa .a {
+    color: var(--sub);
+    font-size: 0.875rem;
+    margin-top: 0.375rem;
+    white-space: pre-wrap;
+  }
+  .qa .a.none {
+    color: var(--danger);
+  }
+  .wmeta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+  .wbig {
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    background: #fff;
+    border-top: 0.0625rem solid var(--line);
+    z-index: 6;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav button {
+    flex: 1;
+    border: none;
+    background: none;
+    padding: 0.5625rem 0 0.625rem;
+    font-size: 0.6875rem;
+    color: var(--sub);
+    cursor: pointer;
+  }
+  nav button .ic {
+    display: flex;
+    justify-content: center;
+    line-height: 1.2;
+  }
+  nav button .ic svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  nav button.on {
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 5.25rem;
+    transform: translateX(-50%);
+    background: #1f2d3d;
+    color: #fff;
+    padding: 0.625rem 1rem;
+    border-radius: 62.4375rem;
+    font-size: 0.875rem;
+    opacity: 0;
+    transition: opacity .25s;
+    z-index: 20;
+    pointer-events: none;
+  }
+  .toast.show {
+    opacity: .95;
+  }
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    padding: 1.125rem;
+  }
+  .modal.show {
+    display: flex;
+  }
+  .modal .box {
+    background: #fff;
+    border-radius: 1rem;
+    padding: 1rem;
+    width: 100%;
+    max-width: 26.25rem;
+  }
+  .modal h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+  }
+  .spinner {
+    text-align: center;
+    color: var(--sub);
+    padding: 1.5rem;
+    font-size: 0.875rem;
+  }
+</style>
+</head>
+<body>
+<header> PW手帳 <small id="hd-sub"></small></header>
+
+<!-- 記録 -->
+<section id="view-log" class="view active">
+  <div class="card">
+    <h2>日時</h2>
+    <label>日付</label>
+    <input type="date" id="log-date">
+    <label>時刻</label>
+    <div class="row" style="gap:0.5rem;">
+      <select id="log-hour"></select>
+      <select id="log-min"></select>
+    </div>
+  </div>
+  <div class="card">
+    <h2>内容</h2>
+    <label>ショートカット</label>
+    <div class="chips" id="presets"></div>
+    <label>やったこと</label>
+    <div style="position:relative;">
+      <input type="text" id="log-action" placeholder="例：ワン、ごはん など" style="padding-right:2.5rem;">
+      <button type="button" class="mini" id="btn-clear-action" aria-label="クリア" title="クリア" style="position:absolute;top:50%;right:0.25rem;transform:translateY(-50%);"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <label>備考（任意）</label>
+    <div style="position:relative;">
+      <textarea id="log-note" placeholder="例：初めての場所で夢中作りできた！" style="padding-right:2.5rem;"></textarea>
+      <button type="button" class="mini" id="btn-clear-note" aria-label="クリア" title="クリア" style="position:absolute;top:0.375rem;right:0.25rem;"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <button class="btn" id="btn-save">この内容で記録する</button>
+  </div>
+  <div class="card">
+    <h2>最近の記録（直近20件）</h2>
+    <div id="today-list"><div class="spinner">読み込み中…</div></div>
+  </div>
+</section>
+
+<!-- 一覧 -->
+<section id="view-list" class="view">
+  <div class="card">
+    <div class="chips" id="list-mode" style="margin-bottom:0.625rem;">
+      <div class="chip on" data-mode="day">日付</div>
+      <div class="chip" data-mode="range">期間</div>
+      <div class="chip" data-mode="all">全期間</div>
+    </div>
+
+    <div class="datebar" id="list-day-controls">
+      <button class="navbtn" id="d-prev">‹</button>
+      <input type="date" id="list-date">
+      <button class="navbtn" id="d-next">›</button>
+    </div>
+
+    <div id="list-range-controls" style="display:none;">
+      <label>開始日</label>
+      <input type="date" id="list-from">
+      <label>終了日</label>
+      <input type="date" id="list-to">
+    </div>
+  </div>
+  <div class="card">
+    <div style="position:relative;">
+      <input type="text" id="list-search" placeholder="キーワードで絞り込み" style="padding-right:2.5rem;">
+      <button type="button" class="mini" id="btn-clear-search" aria-label="クリア" title="クリア" style="position:absolute;top:50%;right:0.25rem;transform:translateY(-50%);"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <div id="list-area" style="margin-top:1rem;"><div class="spinner">読み込み中…</div></div>
+  </div>
+</section>
+
+<!-- 体重 -->
+<section id="view-weight" class="view">
+  <div class="card">
+    <div class="wmeta"><h2 style="margin:0;">体重の推移</h2><div><span class="wbig" id="w-latest">–</span> kg</div></div>
+    <canvas id="w-chart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <h2>体重を記録</h2>
+    <label>計測日</label>
+    <input type="date" id="w-date">
+    <label>体重(kg)</label>
+    <div style="position:relative;">
+      <input type="number" id="w-kg" step="0.01" inputmode="decimal" placeholder="例：26.5" style="padding-right:2.5rem;">
+      <button type="button" class="mini" id="btn-clear-wkg" aria-label="クリア" title="クリア" style="position:absolute;top:50%;right:0.25rem;transform:translateY(-50%);"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <label>備考（任意）</label>
+    <div style="position:relative;">
+      <input type="text" id="w-note" style="padding-right:2.5rem;">
+      <button type="button" class="mini" id="btn-clear-wnote" aria-label="クリア" title="クリア" style="position:absolute;top:50%;right:0.25rem;transform:translateY(-50%);"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <button class="btn sub" id="btn-wsave">体重を記録する</button>
+  </div>
+</section>
+
+<!-- 質問 -->
+<section id="view-qa" class="view">
+  <div class="card">
+    <h2>協会への質問を追加</h2>
+    <div style="position:relative;">
+      <textarea id="qa-new" placeholder="聞きたいことを入力" style="padding-right:2.5rem;"></textarea>
+      <button type="button" class="mini" id="btn-clear-qanew" aria-label="クリア" title="クリア" style="position:absolute;top:0.375rem;right:0.25rem;"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <button class="btn sub" id="btn-qadd">質問を追加する</button>
+  </div>
+  <div class="card">
+    <h2>質問リスト</h2>
+    <div id="qa-area"><div class="spinner">読み込み中…</div></div>
+  </div>
+</section>
+
+<nav>
+  <button class="on" data-v="log"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></span>記録</button>
+  <button data-v="list"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>一覧</button>
+  <button data-v="weight"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v4l3 2"/></svg></span>体重</button>
+  <button data-v="qa"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9-.7c0 1.7-2.4 1.9-2.4 3.7"/><line x1="12" y1="16.5" x2="12.01" y2="16.5"/></svg></span>質問</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- 記録編集モーダル -->
+<div class="modal" id="modal-log">
+  <div class="box">
+    <h3>記録を編集</h3>
+    <label>時刻</label><input type="time" id="m-time">
+    <label>やったこと</label><input type="text" id="m-act">
+    <label>備考</label><textarea id="m-note"></textarea>
+    <button class="btn" id="m-save">保存</button>
+    <button class="btn ghost" id="m-cancel" style="margin-top:0.5rem;">キャンセル</button>
+  </div>
+</div>
+
+<!-- 回答編集モーダル -->
+<div class="modal" id="modal-qa">
+  <div class="box">
+    <h3>回答を編集</h3>
+    <div id="mq-q" style="font-weight:600;margin-bottom:0.5rem;"></div>
+    <label>回答</label><textarea id="mq-a" style="min-height:7.5rem;"></textarea>
+    <button class="btn sub" id="mq-save">保存</button>
+    <button class="btn ghost" id="mq-cancel" style="margin-top:0.5rem;">キャンセル</button>
+  </div>
+</div>
+
+<!-- 分数入力モーダル（散歩・カート散歩・夢中作り・仰向け抱っこ用） -->
+<div class="modal" id="modal-min">
+  <div class="box">
+    <h3 id="mm-title">分数を選択</h3>
+    <label>分数（5分単位・指定なしも可）</label>
+    <select id="mm-min"></select>
+    <button class="btn" id="mm-ok">追加する</button>
+    <button class="btn ghost" id="mm-cancel" style="margin-top:0.5rem;">キャンセル</button>
+  </div>
+</div>
+
+<script>
+/* ---------- google.script.run を Promise 化 ---------- */
+function call(fn){
+  const args = Array.prototype.slice.call(arguments,1);
+  return new Promise((resolve,reject)=>{
+    const runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+    runner[fn].apply(runner,args);
+  });
+}
+const $ = s => document.querySelector(s);
+const $$ = s => Array.prototype.slice.call(document.querySelectorAll(s));
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toInputDate(ymd){return String(ymd||'').replace(/\//g,'-');}      // 2025/05/22 -> 2025-05-22
+function fromInputDate(s){return String(s||'').replace(/-/g,'/');}         // 2025-05-22 -> 2025/05/22
+function stripHour(t){const m=String(t).match(/^0(\d:\d{2})$/);return m?m[1]:t;}
+
+let INIT=null;
+
+/* ---------- 「やったこと」テキスト欄 ⇔ チップ 同期まわり ---------- */
+/** テキスト欄の中身を「、」区切りの配列にする（同じ項目が複数回あってもOK） */
+function currentActionList(){
+  return $('#log-action').value.split('、').map(s=>s.trim()).filter(Boolean);
+}
+/** 配列を「、」区切りでテキスト欄へ反映 */
+function setActionList(list){
+  $('#log-action').value = list.join('、');
+}
+/** チップをタップ: 常にテキスト欄の末尾に追加する（同じ項目を何度選んでもOK・制限なし） */
+function addToActionText(name){
+  const list = currentActionList();
+  list.push(name);
+  setActionList(list);
+  $('#log-action').classList.remove('invalid');
+}
+/** タップした瞬間だけチップを緑色に光らせる（同じ項目を何度でも選べる仕様のため、
+ *  「選択中」を表す常時ON表示はせず、押した合図としてのフラッシュのみ行う） */
+function flashChip(chipEl){
+  chipEl.classList.add('on');
+  clearTimeout(chipEl._flashTimer);
+  chipEl._flashTimer = setTimeout(()=>{ chipEl.classList.remove('on'); }, 220);
+}
+
+/* ---------- 分数入力が必要なプリセット ---------- */
+const DURATION_PRESETS = new Set(['散歩', 'カート散歩', '夢中作り', '仰向け抱っこ']);
+// プリセットごとの分数上限（5分刻み）。未指定のものが増えた場合は60分をデフォルトに。
+const DURATION_MAX = { '散歩':120, 'カート散歩':120, '夢中作り':60, '仰向け抱っこ':60 };
+
+/** name の分数選択ダイアログを開く。OKで「name(◯分)」の形でテキスト欄に追加する */
+function openMinuteDialog(name, chipEl){
+  $('#mm-title').textContent = name + 'は何分？';
+
+  const max = DURATION_MAX[name] || 60;
+  let opts = '<option value="">指定なし</option>';
+  for (let m = 5; m <= max; m += 5) opts += `<option value="${m}">${m}分</option>`;
+  $('#mm-min').innerHTML = opts;
+
+  $('#modal-min').classList.add('show');
+
+  $('#mm-ok').onclick = ()=>{
+    const mins = $('#mm-min').value;
+    const label = mins ? `${name}(${mins}分)` : name;
+    addToActionText(label);
+    if(chipEl) flashChip(chipEl);
+    $('#modal-min').classList.remove('show');
+  };
+}
+$('#mm-cancel').addEventListener('click', ()=>$('#modal-min').classList.remove('show'));
+
+/* ---------- 起動 ---------- */
+window.addEventListener('load', async ()=>{
+  try{
+    INIT = await call('getInit');
+  }catch(e){ document.body.innerHTML='<p style="padding:1.25rem">読み込みに失敗しました：'+esc(e.message||e)+'</p>'; return; }
+
+  // 日付・時刻の初期値
+  $('#log-date').value = toInputDate(INIT.today);
+  fillTimeSelects(); setLogTimeNow();
+  $('#list-date').value = toInputDate(INIT.today);
+  $('#w-date').value = toInputDate(INIT.today);
+
+  // プリセットチップ（タップするたびに「やったこと」テキスト欄に追加。何度でも選択可）
+  const box=$('#presets');
+  INIT.presets.forEach(name=>{
+    const c=document.createElement('div'); c.className='chip'; c.textContent=name;
+    c.addEventListener('click',()=>{
+      if(DURATION_PRESETS.has(name)){
+        openMinuteDialog(name, c);
+      }else{
+        addToActionText(name);
+        flashChip(c);
+      }
+    });
+    box.appendChild(c);
+  });
+
+  bindNav(); bindLog(); bindList(); bindWeight(); bindQA();
+  loadToday();
+});
+
+/* ---------- ナビ切替 ---------- */
+function bindNav(){
+  $$('nav button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      $$('nav button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');
+      const v=b.dataset.v;
+      $$('.view').forEach(x=>x.classList.remove('active'));
+      $('#view-'+v).classList.add('active');
+      if(v==='list') loadList();
+      if(v==='weight') loadWeight();
+      if(v==='qa') loadQA();
+    });
+  });
+}
+
+/* ---------- 記録タブ ---------- */
+function bindLog(){
+  // 入力し始めたらエラー表示を解除
+  $('#log-action').addEventListener('input', ()=>$('#log-action').classList.remove('invalid'));
+
+  // 「やったこと」欄をクリア
+  $('#btn-clear-action').addEventListener('click', ()=>{
+    $('#log-action').value='';
+    $('#log-action').classList.remove('invalid');
+    $('#log-action').focus();
+  });
+
+  // 「備考」欄をクリア
+  $('#btn-clear-note').addEventListener('click', ()=>{
+    $('#log-note').value='';
+    $('#log-note').focus();
+  });
+
+  $('#btn-save').addEventListener('click', async ()=>{
+    const btn=$('#btn-save');
+    const actionText = $('#log-action').value.trim();
+
+    // 「やったこと」未入力ならサーバーに送らずその場でエラー表示
+    if(!actionText){
+      $('#log-action').classList.add('invalid');
+      $('#log-action').focus();
+      toast('「やったこと」を入力してください');
+      return;
+    }
+
+    btn.disabled=true;
+    const origLabel = btn.textContent;
+    const payload={
+      date: fromInputDate($('#log-date').value),
+      time: getLogTimeStr(),
+      action: actionText,
+      note: $('#log-note').value.trim()
+    };
+    try{
+      const r=await call('addLog',payload);
+      if(!r.ok){
+        toast(r.error||'失敗しました');
+        btn.disabled=false;
+      }else{
+        // 成功したことがはっきり分かるよう、ボタン自体の見た目も一時的に変える
+        toast('✅ 記録しました');
+        btn.classList.add('success');
+        btn.textContent = '記録しました ✓';
+        $('#log-action').value=''; $('#log-note').value='';
+        setLogTimeNow();
+        loadToday();
+        setTimeout(()=>{
+          btn.classList.remove('success');
+          btn.textContent = origLabel;
+          btn.disabled=false;
+        }, 1000);
+      }
+    }catch(e){
+      toast('エラー：'+(e.message||e));
+      btn.disabled=false;
+    }
+  });
+}
+function pad2(n){return ('0'+n).slice(-2);}
+/* 今の時刻を10分単位に丸める（分の1の位: 0〜4は切り下げ / 5〜9は切り上げ） */
+function timeNowRounded(){
+  const d=new Date();
+  let h=d.getHours(), m=Math.round(d.getMinutes()/10)*10;
+  if(m===60){m=0;h=(h+1)%24;}
+  return {h,m};
+}
+function fillTimeSelects(){
+  let oh=''; for(let i=0;i<24;i++) oh+='<option value="'+i+'">'+i+'時</option>';
+  $('#log-hour').innerHTML=oh;
+  let om=''; for(let i=0;i<60;i+=10) om+='<option value="'+i+'">'+pad2(i)+'分</option>';
+  $('#log-min').innerHTML=om;
+}
+function setLogTimeNow(){const t=timeNowRounded();$('#log-hour').value=String(t.h);$('#log-min').value=String(t.m);}
+function getLogTimeStr(){return $('#log-hour').value+':'+pad2(Number($('#log-min').value));}
+/* 10分区切りに丸める（分の1の位：0〜4は切り下げ、5〜9は切り上げ）。例 17:53→17:50, 17:55→18:00 */
+function round10(hhmm){
+  const m0=String(hhmm).match(/(\d{1,2}):(\d{2})/); if(!m0) return hhmm;
+  let h=Number(m0[1]), m=Number(m0[2]);
+  const last=m%10;
+  m = (last<=4) ? (m-last) : (m-last+10);
+  if(m>=60){m=0;h=(h+1)%24;}
+  return ('0'+h).slice(-2)+':'+('0'+m).slice(-2);
+}
+
+async function loadToday(){
+  const wrap=$('#today-list'); wrap.innerHTML='<div class="spinner">読み込み中…</div>';
+  try{
+    // 日付の条件なしで、最新の記録を新しい順に20件だけ取得する
+    const logs=await call('getRecentLogs', 20);
+    wrap.innerHTML = renderLogs(logs, true); // 複数日にまたがるので日付も表示
+    bindLogItemButtons(wrap, ()=>loadToday());
+  }catch(e){wrap.innerHTML='<div class="empty">読み込み失敗：'+esc(e.message||e)+'</div>';}
+}
+
+/* ---------- 一覧タブ ---------- */
+let listMode = 'day'; // 'day' | 'range' | 'all'
+
+function bindList(){
+  $$('#list-mode .chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      listMode = c.dataset.mode;
+      $$('#list-mode .chip').forEach(x=>x.classList.toggle('on', x===c));
+      if(listMode==='range'){
+        // 初回切替時は「日付」タブで見ていた日を初期値に入れておく
+        if(!$('#list-from').value) $('#list-from').value = $('#list-date').value || toInputDate(INIT.today);
+        if(!$('#list-to').value)   $('#list-to').value   = $('#list-date').value || toInputDate(INIT.today);
+      }
+      $('#list-day-controls').style.display   = (listMode==='day')   ? 'flex'  : 'none';
+      $('#list-range-controls').style.display = (listMode==='range') ? 'block' : 'none';
+      loadList();
+    });
+  });
+  $('#list-date').addEventListener('change', loadList);
+  $('#list-from').addEventListener('change', loadList);
+  $('#list-to').addEventListener('change', loadList);
+  $('#d-prev').addEventListener('click', ()=>shiftDate(-1));
+  $('#d-next').addEventListener('click', ()=>shiftDate(1));
+  // キーワード検索はサーバーに問い合わせ直さず、直近取得した一覧をその場で絞り込む
+  $('#list-search').addEventListener('input', renderFilteredList);
+  // 検索欄をクリア
+  $('#btn-clear-search').addEventListener('click', ()=>{
+    $('#list-search').value='';
+    renderFilteredList();
+    $('#list-search').focus();
+  });
+}
+function shiftDate(delta){
+  const v=$('#list-date').value; if(!v) return;
+  const d=new Date(v+'T00:00:00'); d.setDate(d.getDate()+delta);
+  // toISOString()はUTC変換されるためJSTなど+offset環境だと日付がずれる。
+  // ローカルの年月日をそのまま組み立てる。
+  $('#list-date').value = d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+  loadList();
+}
+let listReqId = 0; // 直近のリクエストだけを表示に反映するためのガード
+let listLogsCache = []; // 直近取得した一覧（検索フィルタはこれをその場で絞り込む）
+async function loadList(){
+  const myReq = ++listReqId;
+  const wrap=$('#list-area'); wrap.innerHTML='<div class="spinner">読み込み中…</div>';
+  try{
+    let from='', to='';
+    if(listMode==='day'){
+      from = to = fromInputDate($('#list-date').value);
+    }else if(listMode==='range'){
+      from = $('#list-from').value ? fromInputDate($('#list-from').value) : '';
+      to   = $('#list-to').value   ? fromInputDate($('#list-to').value)   : '';
+    } // 'all' の場合は from/to とも空のまま＝全期間
+
+    const logs = await call('getLogsRange', from, to);
+    if(myReq !== listReqId) return; // 後から発行された別のリクエストがある場合、この古い結果は捨てる
+    listLogsCache = logs;
+    renderFilteredList();
+  }catch(e){
+    if(myReq !== listReqId) return;
+    wrap.innerHTML='<div class="empty">読み込み失敗：'+esc(e.message||e)+'</div>';
+  }
+}
+
+/** #list-search の入力内容で listLogsCache を絞り込んで表示する（サーバー通信なし） */
+function renderFilteredList(){
+  const wrap = $('#list-area');
+  const q = $('#list-search').value.trim();
+  const filtered = q
+    ? listLogsCache.filter(l => (String(l.action||'') + '　' + String(l.note||'')).includes(q))
+    : listLogsCache;
+  const emptyMsg = q ? '「'+esc(q)+'」に一致する記録がありません' : undefined;
+  wrap.innerHTML = renderLogs(filtered, listMode !== 'day', emptyMsg);
+  bindLogItemButtons(wrap, ()=>loadList());
+}
+
+function renderLogs(logs, showDate, emptyMsg){
+  const header = `
+    <div class="logitem logheader">
+      <div class="logtime${showDate?' wide':''}">${showDate ? '日付' : '時刻'}</div>
+      <div class="logbody"><div class="act">やったこと・備考</div></div>
+      <div class="h-actions" style="display:flex;align-items:center;min-width:2.75rem;">操作</div>
+    </div>`;
+  if(!logs.length) return header + '<div class="empty">'+(emptyMsg || '記録がありません')+'</div>';
+  return header + logs.map(l=>`
+    <div class="logitem" data-id="${esc(l.id)}" data-time="${esc(l.time)}" data-act="${esc(l.action)}" data-note="${esc(l.note)}">
+      <div class="logtime${showDate?' wide':''}">${showDate ? esc(l.date.slice(5))+'('+esc(l.dow)+')<br>'+esc(l.time) : esc(l.time)}</div>
+      <div class="logbody">
+        <div class="act">${esc(l.action)}</div>
+        ${l.note?`<div class="note">${esc(l.note)}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;">
+        <button class="mini edit" aria-label="編集" title="編集"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+        <button class="mini del" aria-label="削除" title="削除"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </div>
+    </div>`).join('');
+}
+
+let editingId=null;
+function bindLogItemButtons(wrap, reload){
+  wrap.querySelectorAll('.logitem:not(.logheader)').forEach(item=>{
+    const id=item.dataset.id;
+    const time=item.dataset.time || '';
+    const act=item.dataset.act || '';
+    const note=item.dataset.note || '';
+    item.querySelector('.edit').addEventListener('click',()=>{
+      editingId=id;
+      $('#m-time').value=(time.length===4?'0':'')+time;
+      $('#m-act').value=act; $('#m-note').value=note;
+      $('#modal-log').classList.add('show');
+      $('#m-save').onclick=async ()=>{
+        try{
+          const r=await call('updateLog', id, {time:stripHour($('#m-time').value), action:$('#m-act').value, note:$('#m-note').value});
+          $('#modal-log').classList.remove('show');
+          if(r.ok){toast('更新しました'); reload();} else toast(r.error||'失敗');
+        }catch(e){toast('エラー：'+(e.message||e));}
+      };
+    });
+    item.querySelector('.del').addEventListener('click',async ()=>{
+      if(!confirm('この記録を削除しますか？\n'+time+' '+act)) return;
+      try{const r=await call('deleteLog', id); if(r.ok){toast('削除しました'); reload();} else toast(r.error||'失敗');}
+      catch(e){toast('エラー：'+(e.message||e));}
+    });
+  });
+}
+$('#m-cancel').addEventListener('click',()=>$('#modal-log').classList.remove('show'));
+
+/* ---------- 体重タブ ---------- */
+let wChart=null;
+function bindWeight(){
+  $('#btn-wsave').addEventListener('click', async ()=>{
+    const btn=$('#btn-wsave'); btn.disabled=true;
+    try{
+      const r=await call('addWeight',{date:fromInputDate($('#w-date').value), kg:$('#w-kg').value, note:$('#w-note').value.trim()});
+      if(r.ok){toast('記録しました'); $('#w-kg').value=''; $('#w-note').value=''; loadWeight();}
+      else toast(r.error||'失敗');
+    }catch(e){toast('エラー：'+(e.message||e));}
+    btn.disabled=false;
+  });
+  // 体重・備考欄をクリア
+  $('#btn-clear-wkg').addEventListener('click', ()=>{ $('#w-kg').value=''; $('#w-kg').focus(); });
+  $('#btn-clear-wnote').addEventListener('click', ()=>{ $('#w-note').value=''; $('#w-note').focus(); });
+}
+async function loadWeight(){
+  try{
+    const data=await call('getWeights');
+    if(data.length){$('#w-latest').textContent=data[data.length-1].kg;}
+    const labels=data.map(d=>d.date.slice(5)); // MM/dd
+    const vals=data.map(d=>d.kg);
+    if(wChart) wChart.destroy();
+    wChart=new Chart($('#w-chart').getContext('2d'),{
+      type:'line',
+      data:{labels,datasets:[{label:'体重(kg)',data:vals,borderColor:'#2e7d6b',
+            backgroundColor:'rgba(46,125,107,.12)',fill:true,tension:.25,pointRadius:3}]},
+      options:{responsive:true,plugins:{legend:{display:false}},
+               scales:{y:{beginAtZero:false}}}
+    });
+  }catch(e){toast('体重の読込失敗：'+(e.message||e));}
+}
+
+/* ---------- 質問タブ ---------- */
+function bindQA(){
+  $('#btn-qadd').addEventListener('click', async ()=>{
+    const q=$('#qa-new').value.trim(); if(!q){toast('質問を入力してください');return;}
+    const btn=$('#btn-qadd'); btn.disabled=true;
+    try{
+      const r=await call('addQA',{q});
+      if(r.ok){toast('追加しました'); $('#qa-new').value=''; loadQA();} else toast(r.error||'失敗');
+    }catch(e){toast('エラー：'+(e.message||e));}
+    btn.disabled=false;
+  });
+  $('#mq-cancel').addEventListener('click',()=>$('#modal-qa').classList.remove('show'));
+  // 質問入力欄をクリア
+  $('#btn-clear-qanew').addEventListener('click', ()=>{ $('#qa-new').value=''; $('#qa-new').focus(); });
+}
+async function loadQA(){
+  const wrap=$('#qa-area'); wrap.innerHTML='<div class="spinner">読み込み中…</div>';
+  try{
+    const list=await call('getQA');
+    if(!list.length){wrap.innerHTML='<div class="empty">質問がありません</div>'; return;}
+    wrap.innerHTML=list.map(x=>`
+      <div class="qa" data-no="${esc(x.no)}">
+        <div class="q"><span class="qno">No.${esc(x.no)}</span>${esc(x.q)}</div>
+        <div class="a ${x.a?'':'none'}">${x.a?esc(x.a):'未回答（タップで回答を追加）'}</div>
+      </div>`).join('');
+    wrap.querySelectorAll('.qa').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const no=el.dataset.no;
+        const item=list.find(y=>String(y.no)===String(no));
+        $('#mq-q').textContent='No.'+no+'　'+item.q;
+        $('#mq-a').value=item.a||'';
+        $('#modal-qa').classList.add('show');
+        $('#mq-save').onclick=async ()=>{
+          try{
+            const r=await call('updateAnswer', no, $('#mq-a').value);
+            $('#modal-qa').classList.remove('show');
+            if(r.ok){toast('保存しました'); loadQA();} else toast(r.error||'失敗');
+          }catch(e){toast('エラー：'+(e.message||e));}
+        };
+      });
+    });
+  }catch(e){wrap.innerHTML='<div class="empty">読み込み失敗：'+esc(e.message||e)+'</div>';}
+}
+</script>
+</body>
+</html>
