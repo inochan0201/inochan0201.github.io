@@ -1,4 +1,3 @@
-
 const SHEET_LOG = '記録';
 const SHEET_WEIGHT = '体重';
 const SHEET_QA = '質問';
@@ -57,6 +56,15 @@ function timeKey_(t) {
   return Number(m[1]) * 60 + Number(m[2]);
 }
 
+/** 日付文字列('yyyy/MM/dd' 等)と時刻文字列('H:mm')から、並べ替え用の実際の Date を組み立てる */
+function combineDateTime_(dateStr, timeStr) {
+  const d = parseDate_(dateStr);
+  const m = String(timeStr || '').match(/(\d{1,2}):(\d{2})/);
+  const hh = m ? Number(m[1]) : 0;
+  const mm = m ? Number(m[2]) : 0;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm, 0);
+}
+
 /** 期間（毎月21日〜翌20日） 例: 2026/05/21〜2026/06/20 */
 function periodOf_(d) {
   const y = d.getFullYear(), mo = d.getMonth(), day = d.getDate();
@@ -90,19 +98,19 @@ function getInit() {
 /* ===== 記録 ===== */
 
 /**
- * 指定日の記録を時刻順で返す。dateStr 省略時は当日。
+ * 指定日の記録を時刻順（新しい順）で返す。dateStr 省略時は当日。
  *
- * 記録は常にシート末尾に追記されていくため、まずは末尾の直近数百行だけを読み、
- * 対象日の行が見つかればそこで打ち切る（＝シート全体を毎回読み込まない）。
- * 見つからない場合だけ範囲を広げて読み直す。これにより、記録件数が増えても
- * 「今日の記録」の取得速度がほぼ一定に保たれる。
+ * 記録シートは追加・更新のたびに「日時」列で降順（新しい順）に自動で並べ替えられるため、
+ * まずは先頭の直近数十行だけを読み、対象日の行が見つかればそこで打ち切る
+ * （＝シート全体を毎回読み込まない）。見つからない場合だけ範囲を広げて読み直す。
+ * これにより、記録件数が増えても「今日の記録」の取得速度がほぼ一定に保たれる。
  */
 function getLogs(dateStr) {
   return getLogsByDate_(dateStr);
 }
 
 /**
- * 末尾から少しずつ範囲を広げて対象日を探す内部共通処理。
+ * 先頭（＝最新）から少しずつ範囲を広げて対象日を探す内部共通処理。
  * getLogs（記録タブ）と getLogsRange の単日指定（一覧タブの「日付」モード）の
  * 両方から使う、共通の高速ルート。
  */
@@ -116,21 +124,20 @@ function getLogsByDate_(dateStr) {
         iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考'), iId = h.indexOf('ID');
   const target = dateStr || fmtDate_(new Date());
 
-  let chunk = 30; // まず直近30行から探す
+  let chunk = 30; // まず先頭30行から探す
   let values = [];
   let firstPass = true;
   while (true) {
-    const startRow = Math.max(2, lastRow - chunk + 1);
-    const numRows = lastRow - startRow + 1;
-    values = sh.getRange(startRow, 1, numRows, lastCol).getValues();
+    const numRows = Math.min(chunk, lastRow - 1);
+    values = sh.getRange(2, 1, numRows, lastCol).getValues();
     const found = values.some(row => normDate_(row[iDate]) === target);
-    if (found || startRow === 2) break; // 見つかった、またはシート先頭まで読みきった
+    if (found || numRows === lastRow - 1) break; // 見つかった、またはシート全体を読みきった
 
     if (firstPass) {
-      // シートは追記順（下ほど新しい）なので、最終行の日付より新しい日付を
-      // 探している場合はこれ以上遡っても見つからない（＝その日はまだデータなし）
-      const lastDate = normDate_(values[values.length - 1][iDate]);
-      if (lastDate && target > lastDate) return [];
+      // シートは日時降順（上ほど新しい）に保たれているので、先頭行の日付より
+      // 新しい日付を探している場合はこれ以上読んでも見つからない（＝まだデータなし）
+      const topDate = normDate_(values[0][iDate]);
+      if (topDate && target > topDate) return [];
       firstPass = false;
     }
     chunk *= 4; // 見つからなければ範囲を広げて読み直す
@@ -155,7 +162,7 @@ function getLogsByDate_(dateStr) {
 
 /**
  * 日付条件なしで、最新の記録を新しい順に n 件返す（記録タブの「今日の記録」用）。
- * 記録は常にシート末尾に追記されるため、末尾から n 件だけ読めばよく高速。
+ * 記録シートは常に「日時」列で降順に保たれているため、先頭から n 件だけ読めばよく高速。
  */
 function getRecentLogs(n) {
   n = Number(n) || 20;
@@ -167,9 +174,8 @@ function getRecentLogs(n) {
   const iDate = h.indexOf('日付'), iDow = h.indexOf('曜日'), iTime = h.indexOf('時刻'),
         iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考'), iId = h.indexOf('ID');
 
-  const startRow = Math.max(2, lastRow - n + 1);
-  const numRows = lastRow - startRow + 1;
-  const values = sh.getRange(startRow, 1, numRows, lastCol).getValues();
+  const numRows = Math.min(n, lastRow - 1);
+  const values = sh.getRange(2, 1, numRows, lastCol).getValues();
 
   const out = [];
   for (let i = 0; i < values.length; i++) {
@@ -216,8 +222,10 @@ function addLog(p) {
   rowObj['備考'] = p.note || '';
   rowObj['期間'] = periodOf_(dateObj);
   rowObj['ID'] = genId_();
+  rowObj['日時'] = combineDateTime_(rowObj['日付'], rowObj['時刻']);
   const row = h.map(name => (name in rowObj) ? rowObj[name] : '');
   sh.appendRow(row);
+  sortLogSheet_();
   return { ok: true };
 }
 
@@ -228,12 +236,21 @@ function updateLog(id, p) {
   const values = sh.getDataRange().getValues();
   const h = values[0];
   const iId = h.indexOf('ID'), iTime = h.indexOf('時刻'),
-        iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考');
+        iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考'),
+        iDate = h.indexOf('日付'), iDatetime = h.indexOf('日時');
   for (let r = 1; r < values.length; r++) {
     if (String(values[r][iId]) === String(id)) {
-      if (p.time !== undefined) sh.getRange(r + 1, iTime + 1).setValue(normTime_(p.time));
+      if (p.time !== undefined) {
+        const newTime = normTime_(p.time);
+        sh.getRange(r + 1, iTime + 1).setValue(newTime);
+        if (iDatetime >= 0) {
+          const dStr = normDate_(values[r][iDate]);
+          sh.getRange(r + 1, iDatetime + 1).setValue(combineDateTime_(dStr, newTime));
+        }
+      }
       if (p.action !== undefined) sh.getRange(r + 1, iAct + 1).setValue(p.action);
       if (p.note !== undefined) sh.getRange(r + 1, iNote + 1).setValue(p.note);
+      sortLogSheet_();
       return { ok: true };
     }
   }
@@ -253,6 +270,44 @@ function deleteLog(id) {
     }
   }
   return { ok: false, error: '対象が見つかりませんでした' };
+}
+
+/** 記録シートを「日時」列で新しい順（降順）に並べ替える。日時列が無ければ何もしない */
+function sortLogSheet_() {
+  const sh = sheet_(SHEET_LOG);
+  const lastRow = sh.getLastRow();
+  if (lastRow < 3) return; // データが0〜1行なら並べ替え不要
+  const lastCol = sh.getLastColumn();
+  const h = headers_(sh);
+  const iDatetime = h.indexOf('日時');
+  if (iDatetime < 0) return; // 日時列がまだ無ければ何もしない（後方互換）
+  sh.getRange(2, 1, lastRow - 1, lastCol).sort({ column: iDatetime + 1, ascending: false });
+}
+
+/**
+ * 【1回だけ実行】シートに「日時」列を追加した後、既存の記録に日時を後付けで
+ * 埋めるための関数。Apps Scriptエディタから手動で1回だけ実行してください
+ * （実行後は自動で記録シートが日時の降順に並び替わります）。
+ */
+function backfillDatetime() {
+  const sh = sheet_(SHEET_LOG);
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return;
+  const lastCol = sh.getLastColumn();
+  const h = headers_(sh);
+  const iDate = h.indexOf('日付'), iTime = h.indexOf('時刻'), iDatetime = h.indexOf('日時');
+  if (iDatetime < 0) {
+    throw new Error('「日時」列が見つかりません。先にシートへ「日時」列を追加してください。');
+  }
+  const values = sh.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  for (let i = 0; i < values.length; i++) {
+    const dStr = normDate_(values[i][iDate]);
+    const tStr = normTime_(values[i][iTime]);
+    if (!dStr) continue;
+    values[i][iDatetime] = combineDateTime_(dStr, tStr);
+  }
+  sh.getRange(2, 1, values.length, lastCol).setValues(values);
+  sortLogSheet_();
 }
 
 /**
