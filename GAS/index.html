@@ -525,6 +525,8 @@
   <div class="box">
     <h3>記録を編集</h3>
     <label>時刻</label><input type="time" id="m-time">
+    <label>ショートカット</label>
+    <div class="chips" id="m-presets"></div>
     <label>やったこと</label><input type="text" id="m-act">
     <label>備考</label><textarea id="m-note"></textarea>
     <button class="btn" id="m-save">保存</button>
@@ -573,21 +575,27 @@ function stripHour(t){const m=String(t).match(/^0(\d:\d{2})$/);return m?m[1]:t;}
 
 let INIT=null;
 
-/* ---------- 「やったこと」テキスト欄 ⇔ チップ 同期まわり ---------- */
-/** テキスト欄の中身を「、」区切りの配列にする（同じ項目が複数回あってもOK） */
-function currentActionList(){
-  return $('#log-action').value.split('、').map(s=>s.trim()).filter(Boolean);
+/* ---------- 「やったこと」欄 ⇔ チップ 同期まわり ----------
+ * 記録タブの新規入力欄（#log-action）・一覧タブの編集モーダル（#m-act）など、
+ * 複数の入力欄で同じチップ機能を使い回せるよう、対象欄(inputEl)を引数で受け取る。
+ * 省略時は #log-action を対象にする（記録タブでの既存の呼び出し方はそのまま動く）。 */
+/** 対象欄の中身を「、」区切りの配列にする（同じ項目が複数回あってもOK） */
+function currentActionList(inputEl){
+  inputEl = inputEl || $('#log-action');
+  return inputEl.value.split('、').map(s=>s.trim()).filter(Boolean);
 }
-/** 配列を「、」区切りでテキスト欄へ反映 */
-function setActionList(list){
-  $('#log-action').value = list.join('、');
+/** 配列を「、」区切りで対象欄へ反映 */
+function setActionList(list, inputEl){
+  inputEl = inputEl || $('#log-action');
+  inputEl.value = list.join('、');
 }
-/** チップをタップ: 常にテキスト欄の末尾に追加する（同じ項目を何度選んでもOK・制限なし） */
-function addToActionText(name){
-  const list = currentActionList();
+/** チップをタップ: 常に対象欄の末尾に追加する（同じ項目を何度選んでもOK・制限なし） */
+function addToActionText(name, inputEl){
+  inputEl = inputEl || $('#log-action');
+  const list = currentActionList(inputEl);
   list.push(name);
-  setActionList(list);
-  $('#log-action').classList.remove('invalid');
+  setActionList(list, inputEl);
+  inputEl.classList.remove('invalid');
 }
 /** タップした瞬間だけチップを緑色に光らせる（同じ項目を何度でも選べる仕様のため、
  *  「選択中」を表す常時ON表示はせず、押した合図としてのフラッシュのみ行う） */
@@ -596,14 +604,32 @@ function flashChip(chipEl){
   clearTimeout(chipEl._flashTimer);
   chipEl._flashTimer = setTimeout(()=>{ chipEl.classList.remove('on'); }, 220);
 }
+/** プリセットのショートカットチップ群を container に生成し、タップで targetInput に追記する。
+ *  記録タブの新規入力欄・一覧タブの編集モーダルの両方から共通で呼び出す。 */
+function buildPresetChips(container, targetInput){
+  container.innerHTML = '';
+  INIT.presets.forEach(name=>{
+    const c=document.createElement('div'); c.className='chip'; c.textContent=name;
+    c.addEventListener('click',()=>{
+      if(DURATION_PRESETS.has(name)){
+        openMinuteDialog(name, c, targetInput);
+      }else{
+        addToActionText(name, targetInput);
+        flashChip(c);
+      }
+    });
+    container.appendChild(c);
+  });
+}
 
 /* ---------- 分数入力が必要なプリセット ---------- */
 const DURATION_PRESETS = new Set(['散歩', 'カート散歩', '夢中作り', '仰向け抱っこ']);
 // プリセットごとの分数上限（5分刻み）。未指定のものが増えた場合は60分をデフォルトに。
 const DURATION_MAX = { '散歩':120, 'カート散歩':120, '夢中作り':60, '仰向け抱っこ':60 };
 
-/** name の分数選択ダイアログを開く。OKで「name(◯分)」の形でテキスト欄に追加する */
-function openMinuteDialog(name, chipEl){
+/** name の分数選択ダイアログを開く。OKで「name(◯分)」の形を targetInput（省略時は #log-action）に追加する */
+function openMinuteDialog(name, chipEl, targetInput){
+  targetInput = targetInput || $('#log-action');
   $('#mm-title').textContent = name + 'は何分？';
 
   const max = DURATION_MAX[name] || 60;
@@ -616,7 +642,7 @@ function openMinuteDialog(name, chipEl){
   $('#mm-ok').onclick = ()=>{
     const mins = $('#mm-min').value;
     const label = mins ? `${name}(${mins}分)` : name;
-    addToActionText(label);
+    addToActionText(label, targetInput);
     if(chipEl) flashChip(chipEl);
     $('#modal-min').classList.remove('show');
   };
@@ -635,20 +661,10 @@ window.addEventListener('load', async ()=>{
   $('#list-date').value = toInputDate(INIT.today);
   $('#w-date').value = toInputDate(INIT.today);
 
-  // プリセットチップ（タップするたびに「やったこと」テキスト欄に追加。何度でも選択可）
-  const box=$('#presets');
-  INIT.presets.forEach(name=>{
-    const c=document.createElement('div'); c.className='chip'; c.textContent=name;
-    c.addEventListener('click',()=>{
-      if(DURATION_PRESETS.has(name)){
-        openMinuteDialog(name, c);
-      }else{
-        addToActionText(name);
-        flashChip(c);
-      }
-    });
-    box.appendChild(c);
-  });
+  // プリセットチップ（タップするたびに対象欄の末尾に追加。何度でも選択可）
+  // 記録タブの新規入力欄と、一覧タブの編集モーダルの両方に同じチップ群を用意する
+  buildPresetChips($('#presets'), $('#log-action'));
+  buildPresetChips($('#m-presets'), $('#m-act'));
 
   bindNav(); bindLog(); bindList(); bindWeight(); bindQA();
   loadToday();
