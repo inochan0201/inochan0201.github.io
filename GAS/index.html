@@ -167,6 +167,9 @@
     background: #1f9d55;
     transition: background .15s;
   }
+  .btn.danger {
+    background: var(--danger);
+  }
   .btn:disabled {
     opacity: .7;
     cursor: default;
@@ -257,6 +260,12 @@
   }
   .mini.del {
     color: var(--danger);
+  }
+  .editcol {
+    align-self: stretch;
+    min-width: 2.75rem;
+    padding: 0 0.5rem;
+    border-radius: 0.625rem;
   }
   .datebar {
     display: flex;
@@ -395,6 +404,10 @@
     margin: 0 0 0.5rem;
     font-size: 1rem;
   }
+  #modal-log h3 {
+    border-left: 0.1875rem solid var(--accent);
+    padding-left: 0.5rem;
+  }
   .spinner {
     text-align: center;
     color: var(--sub);
@@ -530,6 +543,7 @@
     <label>やったこと</label><input type="text" id="m-act">
     <label>備考</label><textarea id="m-note"></textarea>
     <button class="btn" id="m-save">保存</button>
+    <button class="btn danger" id="m-del" style="margin-top:0.5rem;">削除</button>
     <button class="btn ghost" id="m-cancel" style="margin-top:0.5rem;">キャンセル</button>
   </div>
 </div>
@@ -876,10 +890,7 @@ function renderLogs(logs, showDate, emptyMsg){
         <div class="act">${esc(l.action)}</div>
         ${l.note?`<div class="note">${esc(l.note)}</div>`:''}
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;">
-        <button class="mini edit" aria-label="編集" title="編集"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
-        <button class="mini del" aria-label="削除" title="削除"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-      </div>
+      <button class="mini edit editcol" aria-label="編集" title="編集"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
     </div>`).join('');
 }
 
@@ -902,11 +913,15 @@ function bindLogItemButtons(wrap, reload){
           if(r.ok){toast('更新しました'); reload();} else toast(r.error||'失敗');
         }catch(e){toast('エラー：'+(e.message||e));}
       };
-    });
-    item.querySelector('.del').addEventListener('click',async ()=>{
-      if(!confirm('この記録を削除しますか？\n'+time+' '+act)) return;
-      try{const r=await call('deleteLog', id); if(r.ok){toast('削除しました'); reload();} else toast(r.error||'失敗');}
-      catch(e){toast('エラー：'+(e.message||e));}
+      // 削除は編集モーダル内のボタンから行う（一覧側にはアイコンを出さない）
+      $('#m-del').onclick=async ()=>{
+        if(!confirm('この記録を削除しますか？\n'+time+' '+act)) return;
+        try{
+          const r=await call('deleteLog', id);
+          $('#modal-log').classList.remove('show');
+          if(r.ok){toast('削除しました'); reload();} else toast(r.error||'失敗');
+        }catch(e){toast('エラー：'+(e.message||e));}
+      };
     });
   });
 }
