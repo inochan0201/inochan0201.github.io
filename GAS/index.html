@@ -705,17 +705,15 @@ function bindLog(){
   // 入力し始めたらエラー表示を解除
   $('#log-action').addEventListener('input', ()=>$('#log-action').classList.remove('invalid'));
 
-  // 「やったこと」欄をクリア
+  // 「やったこと」欄をクリア（.focus()を呼ぶとiOS Safariでキーボードが開いてしまうため呼ばない）
   $('#btn-clear-action').addEventListener('click', ()=>{
     $('#log-action').value='';
     $('#log-action').classList.remove('invalid');
-    $('#log-action').focus();
   });
 
   // 「備考」欄をクリア
   $('#btn-clear-note').addEventListener('click', ()=>{
     $('#log-note').value='';
-    $('#log-note').focus();
   });
 
   $('#btn-save').addEventListener('click', async ()=>{
@@ -828,7 +826,6 @@ function bindList(){
   $('#btn-clear-search').addEventListener('click', ()=>{
     $('#list-search').value='';
     renderFilteredList();
-    $('#list-search').focus();
   });
 }
 function shiftDate(delta){
@@ -940,8 +937,8 @@ function bindWeight(){
     btn.disabled=false;
   });
   // 体重・備考欄をクリア
-  $('#btn-clear-wkg').addEventListener('click', ()=>{ $('#w-kg').value=''; $('#w-kg').focus(); });
-  $('#btn-clear-wnote').addEventListener('click', ()=>{ $('#w-note').value=''; $('#w-note').focus(); });
+  $('#btn-clear-wkg').addEventListener('click', ()=>{ $('#w-kg').value=''; });
+  $('#btn-clear-wnote').addEventListener('click', ()=>{ $('#w-note').value=''; });
 }
 async function loadWeight(){
   try{
@@ -973,7 +970,7 @@ function bindQA(){
   });
   $('#mq-cancel').addEventListener('click',()=>$('#modal-qa').classList.remove('show'));
   // 質問入力欄をクリア
-  $('#btn-clear-qanew').addEventListener('click', ()=>{ $('#qa-new').value=''; $('#qa-new').focus(); });
+  $('#btn-clear-qanew').addEventListener('click', ()=>{ $('#qa-new').value=''; });
 }
 async function loadQA(){
   const wrap=$('#qa-area'); wrap.innerHTML='<div class="spinner">読み込み中…</div>';
