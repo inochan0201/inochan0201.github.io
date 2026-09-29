@@ -764,12 +764,18 @@ function bindLog(){
   });
 }
 function pad2(n){return ('0'+n).slice(-2);}
-/* 今の時刻を10分単位に丸める（分の1の位: 0〜4は切り下げ / 5〜9は切り上げ） */
+/* 今の時刻を10分単位に丸める（分の1の位: 0〜4は切り下げ / 5〜9は切り上げ）。
+ * 23:5x → 翌日0:00 のように日付をまたぐ場合は rolloverToNextDay=true を返す */
 function timeNowRounded(){
   const d=new Date();
   let h=d.getHours(), m=Math.round(d.getMinutes()/10)*10;
-  if(m===60){m=0;h=(h+1)%24;}
-  return {h,m};
+  let rolloverToNextDay=false;
+  if(m===60){
+    m=0;
+    if(h===23){ h=0; rolloverToNextDay=true; }
+    else{ h=h+1; }
+  }
+  return {h,m,rolloverToNextDay};
 }
 function fillTimeSelects(){
   let oh=''; for(let i=0;i<24;i++) oh+='<option value="'+i+'">'+i+'時</option>';
@@ -777,7 +783,16 @@ function fillTimeSelects(){
   let om=''; for(let i=0;i<60;i+=10) om+='<option value="'+i+'">'+pad2(i)+'分</option>';
   $('#log-min').innerHTML=om;
 }
-function setLogTimeNow(){const t=timeNowRounded();$('#log-hour').value=String(t.h);$('#log-min').value=String(t.m);}
+function setLogTimeNow(){
+  const t=timeNowRounded();
+  $('#log-hour').value=String(t.h);
+  $('#log-min').value=String(t.m);
+  // 日付をまたいだ場合は日付欄も翌日に進める（そうしないと時刻だけ0:00に戻り日付は前日のままになる）
+  if(t.rolloverToNextDay){
+    const nd=new Date(); nd.setDate(nd.getDate()+1);
+    $('#log-date').value = nd.getFullYear()+'-'+pad2(nd.getMonth()+1)+'-'+pad2(nd.getDate());
+  }
+}
 function getLogTimeStr(){return $('#log-hour').value+':'+pad2(Number($('#log-min').value));}
 /* 10分区切りに丸める（分の1の位：0〜4は切り下げ、5〜9は切り上げ）。例 17:53→17:50, 17:55→18:00 */
 function round10(hhmm){
