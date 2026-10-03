@@ -162,12 +162,12 @@
     color: var(--accent);
     border: 0.0625rem solid var(--accent);
   }
+  .btn {
+    transition: background .15s, opacity .15s, transform .08s;
+  }
   .btn:active {
     opacity: .85;
-  }
-  .btn.success {
-    background: #1f9d55;
-    transition: background .15s;
+    transform: scale(.98);
   }
   .btn.danger {
     background: var(--danger);
@@ -175,6 +175,36 @@
   .btn:disabled {
     opacity: .7;
     cursor: default;
+  }
+  /* 通信中: ボタン内にスピナーを出し、押せない状態であることを示す */
+  .btn.loading {
+    opacity: .85;
+  }
+  .btn.loading::before {
+    content: "";
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.5em;
+    vertical-align: -0.15em;
+    border: 0.15em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btn-spin .7s linear infinite;
+  }
+  @keyframes btn-spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .btn.loading::before { animation-duration: 2s; }
+  }
+  /* 完了: ボタンの種類（通常/danger/ghost）に関わらず緑にする。.danger より後ろに置くこと */
+  .btn.success,
+  .btn.success:disabled {
+    background: #1f9d55;
+    color: #fff;
+    border-color: transparent;
+    opacity: 1;
   }
   .logitem {
     display: flex;
@@ -589,6 +619,37 @@ function toInputDate(ymd){return String(ymd||'').replace(/\//g,'-');}      // 20
 function fromInputDate(s){return String(s||'').replace(/-/g,'/');}         // 2025-05-22 -> 2025/05/22
 function stripHour(t){const m=String(t).match(/^0(\d:\d{2})$/);return m?m[1]:t;}
 
+/* ---------- ボタンの押下フィードバック（通信を伴うボタン共通） ----------
+ * 押す → スピナー付きで「〜中…」(連打できない) → 成功したら緑の「〜しました ✓」を少し見せる → 元に戻る。
+ * task は成功なら true、失敗なら false を返す関数（失敗時のtoastはtask側で出す）。
+ * lockBtns には、通信中に押されると困る同じ画面内の他ボタン（モーダルの削除/キャンセルなど）を渡す。
+ * 戻り値は成功したかどうか。モーダルを閉じる等の後処理は、完了表示のあとに呼び出し側で行う。 */
+async function runWithButton(btn, labels, task, lockBtns){
+  const orig = btn.textContent;
+  const locks = (lockBtns||[]).filter(b=>b && !b.disabled);
+  locks.forEach(b=>{ b.disabled = true; });
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btn.textContent = labels.loading;
+  let ok = false;
+  try{
+    ok = await task();
+  }catch(e){
+    toast('エラー：'+(e.message||e));
+  }
+  btn.classList.remove('loading');
+  if(ok){
+    btn.classList.add('success');
+    btn.textContent = labels.done;
+    await new Promise(r=>setTimeout(r, 800));
+    btn.classList.remove('success');
+  }
+  btn.textContent = orig;
+  btn.disabled = false;
+  locks.forEach(b=>{ b.disabled = false; });
+  return ok;
+}
+
 let INIT=null;
 
 /* ---------- 「やったこと」欄 ⇔ チップ 同期まわり ----------
@@ -730,37 +791,21 @@ function bindLog(){
       return;
     }
 
-    btn.disabled=true;
-    const origLabel = btn.textContent;
     const payload={
       date: fromInputDate($('#log-date').value),
       time: getLogTimeStr(),
       action: actionText,
       note: $('#log-note').value.trim()
     };
-    try{
+    await runWithButton(btn, {loading:'記録中…', done:'記録しました ✓'}, async ()=>{
       const r=await call('addLog',payload);
-      if(!r.ok){
-        toast(r.error||'失敗しました');
-        btn.disabled=false;
-      }else{
-        // 成功したことがはっきり分かるよう、ボタン自体の見た目も一時的に変える
-        toast('✅ 記録しました');
-        btn.classList.add('success');
-        btn.textContent = '記録しました ✓';
-        $('#log-action').value=''; $('#log-note').value='';
-        setLogTimeNow();
-        loadToday();
-        setTimeout(()=>{
-          btn.classList.remove('success');
-          btn.textContent = origLabel;
-          btn.disabled=false;
-        }, 1000);
-      }
-    }catch(e){
-      toast('エラー：'+(e.message||e));
-      btn.disabled=false;
-    }
+      if(!r.ok){ toast(r.error||'失敗しました'); return false; }
+      toast('✅ 記録しました');
+      $('#log-action').value=''; $('#log-note').value='';
+      setLogTimeNow();
+      loadToday();
+      return true;
+    });
   });
 }
 function pad2(n){return ('0'+n).slice(-2);}
@@ -920,21 +965,27 @@ function bindLogItemButtons(wrap, reload){
       $('#m-time').value=(time.length===4?'0':'')+time;
       $('#m-act').value=act; $('#m-note').value=note;
       $('#modal-log').classList.add('show');
+      // 通信中は同じモーダル内の他ボタンを押せないようにし、失敗時はモーダルを開いたままにして再試行できるようにする
+      const modalBtns=()=>[$('#m-save'), $('#m-del'), $('#m-cancel')];
       $('#m-save').onclick=async ()=>{
-        try{
+        const btn=$('#m-save');
+        const ok=await runWithButton(btn, {loading:'保存中…', done:'保存しました ✓'}, async ()=>{
           const r=await call('updateLog', id, {time:stripHour($('#m-time').value), action:$('#m-act').value, note:$('#m-note').value});
-          $('#modal-log').classList.remove('show');
-          if(r.ok){toast('更新しました'); reload();} else toast(r.error||'失敗');
-        }catch(e){toast('エラー：'+(e.message||e));}
+          if(!r.ok){ toast(r.error||'失敗'); return false; }
+          return true;
+        }, modalBtns().filter(b=>b!==btn));
+        if(ok){ $('#modal-log').classList.remove('show'); toast('更新しました'); reload(); }
       };
       // 削除は編集モーダル内のボタンから行う（一覧側にはアイコンを出さない）
       $('#m-del').onclick=async ()=>{
         if(!confirm('この記録を削除しますか？\n'+time+' '+act)) return;
-        try{
+        const btn=$('#m-del');
+        const ok=await runWithButton(btn, {loading:'削除中…', done:'削除しました ✓'}, async ()=>{
           const r=await call('deleteLog', id);
-          $('#modal-log').classList.remove('show');
-          if(r.ok){toast('削除しました'); reload();} else toast(r.error||'失敗');
-        }catch(e){toast('エラー：'+(e.message||e));}
+          if(!r.ok){ toast(r.error||'失敗'); return false; }
+          return true;
+        }, modalBtns().filter(b=>b!==btn));
+        if(ok){ $('#modal-log').classList.remove('show'); toast('削除しました'); reload(); }
       };
     });
   });
@@ -945,13 +996,13 @@ $('#m-cancel').addEventListener('click',()=>$('#modal-log').classList.remove('sh
 let wChart=null;
 function bindWeight(){
   $('#btn-wsave').addEventListener('click', async ()=>{
-    const btn=$('#btn-wsave'); btn.disabled=true;
-    try{
+    const btn=$('#btn-wsave');
+    await runWithButton(btn, {loading:'記録中…', done:'記録しました ✓'}, async ()=>{
       const r=await call('addWeight',{date:fromInputDate($('#w-date').value), kg:$('#w-kg').value, note:$('#w-note').value.trim()});
-      if(r.ok){toast('記録しました'); $('#w-kg').value=''; $('#w-note').value=''; loadWeight();}
-      else toast(r.error||'失敗');
-    }catch(e){toast('エラー：'+(e.message||e));}
-    btn.disabled=false;
+      if(!r.ok){ toast(r.error||'失敗'); return false; }
+      toast('記録しました'); $('#w-kg').value=''; $('#w-note').value=''; loadWeight();
+      return true;
+    });
   });
   // 体重・備考欄をクリア
   $('#btn-clear-wkg').addEventListener('click', ()=>{ $('#w-kg').value=''; });
@@ -978,12 +1029,13 @@ async function loadWeight(){
 function bindQA(){
   $('#btn-qadd').addEventListener('click', async ()=>{
     const q=$('#qa-new').value.trim(); if(!q){toast('質問を入力してください');return;}
-    const btn=$('#btn-qadd'); btn.disabled=true;
-    try{
+    const btn=$('#btn-qadd');
+    await runWithButton(btn, {loading:'追加中…', done:'追加しました ✓'}, async ()=>{
       const r=await call('addQA',{q});
-      if(r.ok){toast('追加しました'); $('#qa-new').value=''; loadQA();} else toast(r.error||'失敗');
-    }catch(e){toast('エラー：'+(e.message||e));}
-    btn.disabled=false;
+      if(!r.ok){ toast(r.error||'失敗'); return false; }
+      toast('追加しました'); $('#qa-new').value=''; loadQA();
+      return true;
+    });
   });
   $('#mq-cancel').addEventListener('click',()=>$('#modal-qa').classList.remove('show'));
   // 質問入力欄をクリア
@@ -1007,11 +1059,12 @@ async function loadQA(){
         $('#mq-a').value=item.a||'';
         $('#modal-qa').classList.add('show');
         $('#mq-save').onclick=async ()=>{
-          try{
+          const ok=await runWithButton($('#mq-save'), {loading:'保存中…', done:'保存しました ✓'}, async ()=>{
             const r=await call('updateAnswer', no, $('#mq-a').value);
-            $('#modal-qa').classList.remove('show');
-            if(r.ok){toast('保存しました'); loadQA();} else toast(r.error||'失敗');
-          }catch(e){toast('エラー：'+(e.message||e));}
+            if(!r.ok){ toast(r.error||'失敗'); return false; }
+            return true;
+          }, [$('#mq-cancel')]);
+          if(ok){ $('#modal-qa').classList.remove('show'); toast('保存しました'); loadQA(); }
         };
       });
     });

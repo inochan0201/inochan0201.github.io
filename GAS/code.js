@@ -65,18 +65,39 @@ function combineDateTime_(dateStr, timeStr) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm, 0);
 }
 
-/** 期間（毎月21日〜翌20日） 例: 2026/05/21〜2026/06/20 */
+/** 期間（毎月10日〜翌9日） 例: 2026/09/10〜2026/10/09 */
 function periodOf_(d) {
   const y = d.getFullYear(), mo = d.getMonth(), day = d.getDate();
   let s, e;
-  if (day >= 21) {
-    s = new Date(y, mo, 21);
-    e = new Date(y, mo + 1, 20);
+  if (day >= 10) {
+    s = new Date(y, mo, 10);
+    e = new Date(y, mo + 1, 9);
   } else {
-    s = new Date(y, mo - 1, 21);
-    e = new Date(y, mo, 20);
+    s = new Date(y, mo - 1, 10);
+    e = new Date(y, mo, 9);
   }
   return fmtDate_(s) + '〜' + fmtDate_(e);
+}
+
+/**
+ * 【一度だけ手動実行】記録シートの「期間」列を、「日時」列から新ルール（10日〜翌9日）で全行書き直す。
+ * 期間ルールを21日〜翌20日から変更したため、過去の記録の期間列を揃えたいときに使う。
+ * アプリからは呼ばれない。不要なら実行しなくてよい。
+ */
+function recalcPeriods() {
+  const sh = sheet_(SHEET_LOG);
+  if (sh.getLastRow() < 2) return;
+  const values = sh.getDataRange().getValues();
+  const h = values[0];
+  const iDatetime = h.indexOf('日時'), iPeriod = h.indexOf('期間');
+  if (iDatetime < 0 || iPeriod < 0) throw new Error('「日時」または「期間」列が見つかりません');
+  const out = [];
+  for (let r = 1; r < values.length; r++) {
+    const v = values[r][iDatetime];
+    // 日時が空の行は元の期間をそのまま残す
+    out.push([v ? periodOf_(v instanceof Date ? v : parseDate_(v)) : values[r][iPeriod]]);
+  }
+  sh.getRange(2, iPeriod + 1, out.length, 1).setValues(out);
 }
 
 function genId_() {
