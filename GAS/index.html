@@ -607,7 +607,7 @@
 <div class="modal" id="modal-min">
   <div class="box">
     <h3 id="mm-title">分数を選択</h3>
-    <label>分数（5分単位・指定なしも可）</label>
+    <label>分数（5分単位・指定なしの場合は「〇〇(分)」と入力されます）</label>
     <select id="mm-min"></select>
     <button class="btn" id="mm-ok">追加する</button>
     <button class="btn ghost" id="mm-cancel" style="margin-top:0.5rem;">キャンセル</button>
@@ -730,7 +730,7 @@ function openMinuteDialog(name, chipEl, targetInput){
 
   $('#mm-ok').onclick = ()=>{
     const mins = $('#mm-min').value;
-    const label = mins ? `${name}(${mins}分)` : name;
+    const label = mins ? `${name}(${mins}分)` : `${name}(分)`;
     addToActionText(label, targetInput);
     if(chipEl) flashChip(chipEl);
     $('#modal-min').classList.remove('show');

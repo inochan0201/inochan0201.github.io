@@ -110,8 +110,8 @@ function getInit() {
   return {
     today: fmtDate_(new Date()),       // yyyy/MM/dd
     nowTime: fmtTimeNow_(),            // H:mm
-    presets: ['ワン', 'ツー', 'ごはん', '水', '散歩', 'カート散歩',
-              '夢中作り', '仰向け抱っこ', '歯磨き', '耳掃除', 'ブラッシング',
+    presets: ['ワン', 'ツー', 'ごはん', '水', '散歩',
+              '夢中作り', '仰向け抱っこ', '歯磨き', '耳掃除', '爪切り', 'ブラッシング',
               '病院', 'ネクスガード', 'カルドメック']
   };
 }
@@ -151,18 +151,17 @@ function getLogsByDate_(dateStr) {
   while (true) {
     const numRows = Math.min(chunk, lastRow - 1);
     values = sh.getRange(2, 1, numRows, lastCol).getValues();
-    if (numRows === lastRow - 1) break; // シート全体を読みきった
-
-    const lastDate = normDate_(values[numRows - 1][iDatetime]);
-    if (lastDate && lastDate < target) break;
+    const found = values.some(row => normDate_(row[iDatetime]) === target);
+    if (found || numRows === lastRow - 1) break; // 見つかった、またはシート全体を読みきった
 
     if (firstPass) {
-      // 先頭行の日付より新しい日付を探している場合は、これ以上読んでも見つからない（＝まだデータなし）
+      // シートは日時降順（上ほど新しい）に保たれているので、先頭行の日付より
+      // 新しい日付を探している場合はこれ以上読んでも見つからない（＝まだデータなし）
       const topDate = normDate_(values[0][iDatetime]);
       if (topDate && target > topDate) return [];
       firstPass = false;
     }
-    chunk *= 4; // 対象日の行を読みきれていなければ範囲を広げて読み直す
+    chunk *= 4; // 見つからなければ範囲を広げて読み直す
   }
 
   const out = [];
