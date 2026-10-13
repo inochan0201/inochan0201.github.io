@@ -151,17 +151,18 @@ function getLogsByDate_(dateStr) {
   while (true) {
     const numRows = Math.min(chunk, lastRow - 1);
     values = sh.getRange(2, 1, numRows, lastCol).getValues();
-    const found = values.some(row => normDate_(row[iDatetime]) === target);
-    if (found || numRows === lastRow - 1) break; // 見つかった、またはシート全体を読みきった
+    if (numRows === lastRow - 1) break; // シート全体を読みきった
+
+    const lastDate = normDate_(values[numRows - 1][iDatetime]);
+    if (lastDate && lastDate < target) break;
 
     if (firstPass) {
-      // シートは日時降順（上ほど新しい）に保たれているので、先頭行の日付より
-      // 新しい日付を探している場合はこれ以上読んでも見つからない（＝まだデータなし）
+      // 先頭行の日付より新しい日付を探している場合は、これ以上読んでも見つからない（＝まだデータなし）
       const topDate = normDate_(values[0][iDatetime]);
       if (topDate && target > topDate) return [];
       firstPass = false;
     }
-    chunk *= 4; // 見つからなければ範囲を広げて読み直す
+    chunk *= 4; // 対象日の行を読みきれていなければ範囲を広げて読み直す
   }
 
   const out = [];
