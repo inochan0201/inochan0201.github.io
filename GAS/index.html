@@ -12,9 +12,9 @@
     --line: #e2e6ea;
     --txt: #1f2d3d;
     --sub: #6b7785;
-    --accent: #2e7d6b;
-    --danger: #c0563f;
-    --chip: #eef3f2;
+    --accent: #1f2d3d;   /* テーマ色（体重タブのボタンの黒に統一）。header・見出し線・ボタン・チップ・一覧ヘッダがこの色を使う */
+    --danger: #5b6672;   /* 削除ボタンなど。配色は白黒グレーで統一しているため赤は使わない */
+    --chip: #eef0f3;
     --r-sm: 0.5rem;
     --r-md: 0.75rem;
     --r-full: 999px;
@@ -40,11 +40,10 @@
     padding: 0.75rem 1rem;
     font-weight: 700;
     font-size: 1.0625rem;
-    box-shadow: 0 0.0625rem 0.25rem rgba(0, 0, 0, .15);
   }
   header small {
     font-weight: 400;
-    opacity: .85;
+    color: rgba(255, 255, 255, .75);
     font-size: 0.75rem;
     margin-left: 0.25rem;
   }
@@ -97,8 +96,13 @@
     transition: border-color .15s, box-shadow .15s;
   }
   input.invalid, textarea.invalid {
-    border-color: var(--danger);
-    box-shadow: 0 0 0 0.1875rem rgba(192, 86, 63, .15);
+    border-color: var(--txt);
+    box-shadow: 0 0 0 0.1875rem rgba(31, 45, 61, .18);
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--txt);
+    box-shadow: 0 0 0 0.1875rem rgba(31, 45, 61, .12);
   }
   input::placeholder, textarea::placeholder {
     color: var(--sub);
@@ -154,9 +158,6 @@
     cursor: pointer;
     margin-top: 0.75rem;
   }
-  .btn.sub {
-    background: var(--txt);
-  }
   .btn.ghost {
     background: #fff;
     color: var(--accent);
@@ -198,12 +199,13 @@
   @media (prefers-reduced-motion: reduce) {
     .btn.loading::before { animation-duration: 2s; }
   }
-  /* 完了: ボタンの種類（通常/danger/ghost）に関わらず緑にする。.danger より後ろに置くこと */
+  /* 完了: ボタンの種類（通常/danger/ghost）に関わらず白地＋黒枠に反転させる。.danger より後ろに置くこと */
   .btn.success,
   .btn.success:disabled {
-    background: #1f9d55;
-    color: #fff;
+    background: #fff;
+    color: var(--accent);
     border-color: transparent;
+    box-shadow: inset 0 0 0 0.125rem var(--accent);
     opacity: 1;
   }
   .logitem {
@@ -222,7 +224,6 @@
     border-radius: 0.5rem;
     padding: 0.5rem 0.75rem;
     margin-bottom: 0.5rem;
-    border-top: none;
   }
   .logheader .logtime {
     color: #fff;
@@ -230,6 +231,7 @@
     font-weight: 700;
     min-width: 3.25rem;
     padding-top: 0;
+    border-right-color: rgba(255, 255, 255, .4);
   }
   .logheader .logtime.wide {
     min-width: 4.625rem;
@@ -238,14 +240,6 @@
     color: #fff;
     font-size: 0.6875rem;
     font-weight: 700;
-  }
-  .logheader .h-actions {
-    color: #fff;
-    font-size: 0.6875rem;
-    font-weight: 700;
-  }
-  .logheader .logtime, .logheader .logbody {
-    border-right-color: rgba(255, 255, 255, .4);
   }
   .logtime {
     font-weight: 700;
@@ -263,8 +257,40 @@
   }
   .logbody {
     flex: 1;
-    border-right: 0.0625rem solid var(--line);
-    padding-right: 0.75rem;
+    min-width: 0;
+  }
+  .logitem:not(.logheader) {
+    align-items: center;
+    padding: 0.625rem 0.25rem;
+    cursor: pointer;
+    border-radius: var(--r-sm);
+  }
+  .logheader + .logitem {
+    border-top: none;
+  }
+  .logitem:not(.logheader):active {
+    background: var(--chip);
+  }
+  .logitem .chev {
+    flex: none;
+    color: var(--sub);
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 0 0.25rem;
+  }
+  .logitem .kg {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    margin-right: 0.5rem;
+  }
+  .logitem .diff {
+    font-size: 0.8125rem;
+    color: var(--sub);
+    font-weight: 400;
+  }
+  .logitem .a.none {
+    color: var(--txt);
+    font-weight: 700;
   }
   .logbody .act {
     font-weight: 600;
@@ -291,13 +317,7 @@
     background: var(--chip);
   }
   .mini.del {
-    color: var(--danger);
-  }
-  .editcol {
-    align-self: stretch;
-    min-width: 2.75rem;
-    padding: 0 0.5rem;
-    border-radius: var(--r-sm);
+    color: var(--txt);
   }
   .datebar {
     display: flex;
@@ -324,31 +344,6 @@
     text-align: center;
     padding: 1rem 0;
     font-size: 0.875rem;
-  }
-  .qa {
-    border-top: 0.0625rem solid var(--line);
-    padding: 0.75rem 0.25rem;
-  }
-  .qa:first-child {
-    border-top: none;
-  }
-  .qa .q {
-    font-weight: 600;
-  }
-  .qa .qno {
-    color: var(--accent);
-    font-size: 0.75rem;
-    font-weight: 700;
-    margin-right: 0.25rem;
-  }
-  .qa .a {
-    color: var(--sub);
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
-    white-space: pre-wrap;
-  }
-  .qa .a.none {
-    color: var(--danger);
   }
   .wmeta {
     display: flex;
@@ -519,8 +514,15 @@
 <!-- 体重 -->
 <section id="view-weight" class="view">
   <div class="card">
-    <div class="wmeta"><h2 style="margin:0;">体重の推移</h2><div><span class="wbig" id="w-latest">–</span> kg</div></div>
+    <div class="wmeta"><h2 style="margin:0;">体重の推移</h2><div style="text-align:right;"><div><span class="wbig" id="w-latest">–</span> kg</div><div id="w-latest-diff" style="font-size:0.8125rem;color:var(--sub);"></div></div></div>
     <canvas id="w-chart" height="220"></canvas>
+    <div style="font-size:0.75rem;color:var(--sub);margin-top:0.5rem;">グラフのどこかをタップすると、その日の体重が表示されます</div>
+  </div>
+  <div class="card">
+    <h2>一覧</h2>
+    <div style="font-size:0.75rem;color:var(--sub);margin:-0.25rem 0 0.5rem;">行をタップすると編集・削除できます</div>
+    <div id="w-list"><div class="spinner">読み込み中…</div></div>
+    <button class="btn ghost" id="w-more" style="margin-top:0.5rem;display:none;">さらに表示</button>
   </div>
   <div class="card">
     <h2>体重を記録</h2>
@@ -536,7 +538,7 @@
       <input type="text" id="w-note" style="padding-right:2.5rem;">
       <button type="button" class="mini" id="btn-clear-wnote" aria-label="クリア" title="クリア" style="position:absolute;top:50%;right:0.25rem;transform:translateY(-50%);"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
     </div>
-    <button class="btn sub" id="btn-wsave">体重を記録する</button>
+    <button class="btn" id="btn-wsave">体重を記録する</button>
   </div>
 </section>
 
@@ -548,7 +550,7 @@
       <textarea id="qa-new" placeholder="聞きたいことを入力" style="padding-right:2.5rem;"></textarea>
       <button type="button" class="mini" id="btn-clear-qanew" aria-label="クリア" title="クリア" style="position:absolute;top:0.375rem;right:0.25rem;"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
     </div>
-    <button class="btn sub" id="btn-qadd">質問を追加する</button>
+    <button class="btn" id="btn-qadd">質問を追加する</button>
   </div>
   <div class="card">
     <h2>質問リスト</h2>
@@ -595,11 +597,42 @@
 <!-- 回答編集モーダル -->
 <div class="modal" id="modal-qa">
   <div class="box">
-    <h3>回答を編集</h3>
-    <div id="mq-q" style="font-weight:600;margin-bottom:0.5rem;"></div>
-    <label>回答</label><textarea id="mq-a" style="min-height:7.5rem;"></textarea>
-    <button class="btn sub" id="mq-save">保存</button>
+    <h3>質問を編集 <span id="mq-no" style="color:var(--accent);font-size:0.8125rem;"></span></h3>
+    <label>質問</label>
+    <div style="position:relative;">
+      <textarea id="mq-q" style="padding-right:2.5rem;"></textarea>
+      <button type="button" class="mini" id="btn-clear-mq" aria-label="クリア" title="クリア" style="position:absolute;top:0.375rem;right:0.25rem;"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <label>回答</label>
+    <div style="position:relative;">
+      <textarea id="mq-a" style="min-height:7.5rem;padding-right:2.5rem;"></textarea>
+      <button type="button" class="mini" id="btn-clear-mqa" aria-label="クリア" title="クリア" style="position:absolute;top:0.375rem;right:0.25rem;"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <button class="btn" id="mq-save">保存</button>
+    <button class="btn danger" id="mq-del" style="margin-top:0.5rem;">削除</button>
     <button class="btn ghost" id="mq-cancel" style="margin-top:0.5rem;">キャンセル</button>
+  </div>
+</div>
+
+<!-- 体重編集モーダル -->
+<div class="modal" id="modal-weight">
+  <div class="box">
+    <h3>体重を編集</h3>
+    <label>計測日</label>
+    <input type="date" id="mw-date">
+    <label>体重(kg)</label>
+    <div style="position:relative;">
+      <input type="number" id="mw-kg" step="0.01" inputmode="decimal" style="padding-right:2.5rem;">
+      <button type="button" class="mini" id="btn-clear-mwkg" aria-label="クリア" title="クリア" style="position:absolute;top:50%;right:0.25rem;transform:translateY(-50%);"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <label>備考（任意）</label>
+    <div style="position:relative;">
+      <input type="text" id="mw-note" style="padding-right:2.5rem;">
+      <button type="button" class="mini" id="btn-clear-mwnote" aria-label="クリア" title="クリア" style="position:absolute;top:50%;right:0.25rem;transform:translateY(-50%);"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
+    </div>
+    <button class="btn" id="mw-save">保存</button>
+    <button class="btn danger" id="mw-del" style="margin-top:0.5rem;">削除</button>
+    <button class="btn ghost" id="mw-cancel" style="margin-top:0.5rem;">キャンセル</button>
   </div>
 </div>
 
@@ -700,7 +733,7 @@ function buildPresetChips(container, targetInput){
   INIT.presets.forEach(name=>{
     const c=document.createElement('div'); c.className='chip'; c.textContent=name;
     c.addEventListener('click',()=>{
-      if(DURATION_PRESETS.has(name)){
+      if(durationMax(name)!==undefined){
         openMinuteDialog(name, c, targetInput);
       }else{
         addToActionText(name, targetInput);
@@ -712,16 +745,20 @@ function buildPresetChips(container, targetInput){
 }
 
 /* ---------- 分数入力が必要なプリセット ---------- */
-const DURATION_PRESETS = new Set(['散歩', '夢中作り', '仰向け抱っこ']);
-// プリセットごとの分数上限（5分刻み）。未指定のものが増えた場合は60分をデフォルトに。
-const DURATION_MAX = { '散歩':120, '夢中作り':60, '仰向け抱っこ':60 };
+// 分数を聞くショートカット名 → 最大分（5分刻み）。スプレッドシートの「ショートカット」シートの内容が
+// getInit() の durations で渡ってくる。古いバックエンド（durations なし）の場合は下の既定値を使う。
+const DEFAULT_DURATIONS = { '散歩':120, '夢中作り':60, '仰向け抱っこ':60 };
+function durationMax(name){
+  const d = (INIT && INIT.durations) || DEFAULT_DURATIONS;
+  return Object.prototype.hasOwnProperty.call(d, name) ? (d[name] || 60) : undefined;
+}
 
 /** name の分数選択ダイアログを開く。OKで「name(◯分)」の形を targetInput（省略時は #log-action）に追加する */
 function openMinuteDialog(name, chipEl, targetInput){
   targetInput = targetInput || $('#log-action');
   $('#mm-title').textContent = name + 'は何分？';
 
-  const max = DURATION_MAX[name] || 60;
+  const max = durationMax(name) || 60;
   let opts = '<option value="">指定なし</option>';
   for (let m = 5; m <= max; m += 5) opts += `<option value="${m}">${m}分</option>`;
   $('#mm-min').innerHTML = opts;
@@ -972,7 +1009,6 @@ function renderLogs(logs, showDate, emptyMsg){
     <div class="logitem logheader">
       <div class="logtime${showDate?' wide':''}">${showDate ? '日付' : '時刻'}</div>
       <div class="logbody"><div class="act">やったこと・備考</div></div>
-      <div class="h-actions" style="display:flex;align-items:center;min-width:2.75rem;">操作</div>
     </div>`;
   if(!logs.length) return header + '<div class="empty">'+(emptyMsg || '記録がありません')+'</div>';
   return header + logs.map(l=>`
@@ -982,7 +1018,7 @@ function renderLogs(logs, showDate, emptyMsg){
         <div class="act">${esc(l.action)}</div>
         ${l.note?`<div class="note">${esc(l.note)}</div>`:''}
       </div>
-      <button class="mini edit editcol" aria-label="編集" title="編集"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+      <span class="chev" aria-hidden="true">›</span>
     </div>`).join('');
 }
 
@@ -993,7 +1029,7 @@ function bindLogItemButtons(wrap, reload){
     const time=item.dataset.time || '';
     const act=item.dataset.act || '';
     const note=item.dataset.note || '';
-    item.querySelector('.edit').addEventListener('click',()=>{
+    item.addEventListener('click',()=>{
       editingId=id;
       setModalTime(time);
       $('#m-act').value=act; $('#m-note').value=note;
@@ -1030,6 +1066,26 @@ $('#btn-clear-mnote').addEventListener('click', ()=>{ $('#m-note').value=''; });
 
 /* ---------- 体重タブ ---------- */
 let wChart=null;
+let WDATA=[];          // 日付昇順の体重データ（各要素: {date, kg, note, row}）
+let wShown=10;         // 一覧に表示する件数（「さらに表示」で増やす）
+const WDOW=['日','月','火','水','木','金','土'];
+function fmtDiff(d){
+  const v=Math.round(d*100)/100;
+  return (v>0?'＋':v<0?'−':'±')+Math.abs(v).toFixed(2)+'kg';
+}
+function wDateLabel(dateStr){
+  const m=String(dateStr).match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+  if(!m) return dateStr;
+  const dt=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+  return m[1]+'/'+pad2(Number(m[2]))+'/'+pad2(Number(m[3]))+'('+WDOW[dt.getDay()]+')';
+}
+/** 一覧用の短い日付（MM/dd(曜) の下に年） */
+function wDateShort(dateStr){
+  const m=String(dateStr).match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+  if(!m) return esc(dateStr);
+  const dt=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
+  return pad2(Number(m[2]))+'/'+pad2(Number(m[3]))+'('+WDOW[dt.getDay()]+')<br>'+m[1];
+}
 function bindWeight(){
   $('#btn-wsave').addEventListener('click', async ()=>{
     const btn=$('#btn-wsave');
@@ -1043,19 +1099,103 @@ function bindWeight(){
   // 体重・備考欄をクリア
   $('#btn-clear-wkg').addEventListener('click', ()=>{ $('#w-kg').value=''; });
   $('#btn-clear-wnote').addEventListener('click', ()=>{ $('#w-note').value=''; });
+
+  // 一覧の「さらに表示」
+  $('#w-more').addEventListener('click', ()=>{ wShown+=20; renderWeightList(); });
+
+  // 編集モーダル
+  $('#btn-clear-mwkg').addEventListener('click', ()=>{ $('#mw-kg').value=''; });
+  $('#btn-clear-mwnote').addEventListener('click', ()=>{ $('#mw-note').value=''; });
+  $('#mw-cancel').addEventListener('click', ()=>$('#modal-weight').classList.remove('show'));
+}
+/** 一覧（新しい日付が上）を描画。タップで編集モーダルを開く */
+function renderWeightList(){
+  const wrap=$('#w-list'), more=$('#w-more');
+  if(!WDATA.length){ wrap.innerHTML='<div class="empty">体重の記録がありません</div>'; more.style.display='none'; return; }
+  const rows=WDATA.map((d,i)=>({d, prev:i>0?WDATA[i-1]:null})).reverse();
+  const shown=rows.slice(0,wShown);
+  const header=`
+    <div class="logitem logheader">
+      <div class="logtime wide">日付</div>
+      <div class="logbody"><div class="act">体重（前回比）・備考</div></div>
+    </div>`;
+  wrap.innerHTML=header+shown.map(({d,prev})=>`
+    <div class="logitem witem" data-row="${esc(d.row)}">
+      <div class="logtime wide">${wDateShort(d.date)}</div>
+      <div class="logbody">
+        <div class="act"><span class="kg">${esc(d.kg)} kg</span>${prev?`<span class="diff">${esc(fmtDiff(d.kg-prev.kg))}</span>`:''}</div>
+        ${d.note?`<div class="note">${esc(d.note)}</div>`:''}
+      </div>
+      <span class="chev" aria-hidden="true">›</span>
+    </div>`).join('');
+  more.style.display = rows.length>shown.length ? '' : 'none';
+  wrap.querySelectorAll('.witem').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const item=WDATA.find(x=>String(x.row)===el.dataset.row);
+      if(item) openWeightModal(item);
+    });
+  });
+}
+function openWeightModal(item){
+  $('#mw-date').value=toInputDate(item.date);
+  $('#mw-kg').value=item.kg;
+  $('#mw-note').value=item.note||'';
+  $('#modal-weight').classList.add('show');
+  const modalBtns=()=>[$('#mw-save'), $('#mw-del'), $('#mw-cancel')];
+  const expect={date:item.date, kg:item.kg};   // 行ずれ防止：サーバー側で元の値と一致するか確認する
+  $('#mw-save').onclick=async ()=>{
+    const btn=$('#mw-save');
+    const ok=await runWithButton(btn, {loading:'保存中…', done:'保存しました ✓'}, async ()=>{
+      const r=await call('updateWeight', item.row, {date:fromInputDate($('#mw-date').value), kg:$('#mw-kg').value, note:$('#mw-note').value.trim()}, expect);
+      if(!r.ok){ toast(r.error||'失敗'); return false; }
+      return true;
+    }, modalBtns().filter(b=>b!==btn));
+    if(ok){ $('#modal-weight').classList.remove('show'); toast('更新しました'); loadWeight(); }
+  };
+  $('#mw-del').onclick=async ()=>{
+    if(!confirm('この体重の記録を削除しますか？\n'+wDateLabel(item.date)+'  '+item.kg+'kg')) return;
+    const btn=$('#mw-del');
+    const ok=await runWithButton(btn, {loading:'削除中…', done:'削除しました ✓'}, async ()=>{
+      const r=await call('deleteWeight', item.row, expect);
+      if(!r.ok){ toast(r.error||'失敗'); return false; }
+      return true;
+    }, modalBtns().filter(b=>b!==btn));
+    if(ok){ $('#modal-weight').classList.remove('show'); toast('削除しました'); loadWeight(); }
+  };
 }
 async function loadWeight(){
   try{
     const data=await call('getWeights');
-    if(data.length){$('#w-latest').textContent=data[data.length-1].kg;}
+    WDATA=data;
+    if(data.length){
+      $('#w-latest').textContent=data[data.length-1].kg;
+      $('#w-latest-diff').textContent = data.length>1 ? '前回比 '+fmtDiff(data[data.length-1].kg-data[data.length-2].kg) : '';
+    }else{
+      $('#w-latest').textContent='–'; $('#w-latest-diff').textContent='';
+    }
+    renderWeightList();
     const labels=data.map(d=>d.date.slice(5)); // MM/dd
     const vals=data.map(d=>d.kg);
     if(wChart) wChart.destroy();
     wChart=new Chart($('#w-chart').getContext('2d'),{
       type:'line',
-      data:{labels,datasets:[{label:'体重(kg)',data:vals,borderColor:'#2e7d6b',
-            backgroundColor:'rgba(46,125,107,.12)',fill:true,tension:.25,pointRadius:3}]},
-      options:{responsive:true,plugins:{legend:{display:false}},
+      data:{labels,datasets:[{label:'体重(kg)',data:vals,borderColor:'#1f2d3d',
+            backgroundColor:'rgba(31,45,61,.08)',fill:true,tension:.25,
+            pointRadius:4,pointHoverRadius:7,pointHitRadius:24}]},
+      options:{responsive:true,
+               // 点そのものを狙わなくても、タップした位置に一番近い日のデータが出る
+               interaction:{mode:'nearest',axis:'x',intersect:false},
+               plugins:{legend:{display:false},
+                        tooltip:{padding:12,titleFont:{size:14},bodyFont:{size:15},
+                                 callbacks:{
+                                   title:items=>items.length?wDateLabel(data[items[0].dataIndex].date):'',
+                                   label:c=>{
+                                     const i=c.dataIndex;
+                                     const prev=i>0?'（前回比 '+fmtDiff(data[i].kg-data[i-1].kg)+'）':'';
+                                     return c.parsed.y+' kg'+prev;
+                                   },
+                                   afterLabel:c=>data[c.dataIndex].note||''
+                                 }}},
                scales:{y:{beginAtZero:false}}}
     });
   }catch(e){toast('体重の読込失敗：'+(e.message||e));}
@@ -1076,31 +1216,58 @@ function bindQA(){
   $('#mq-cancel').addEventListener('click',()=>$('#modal-qa').classList.remove('show'));
   // 質問入力欄をクリア
   $('#btn-clear-qanew').addEventListener('click', ()=>{ $('#qa-new').value=''; });
+  // 編集モーダルの質問・回答欄をクリア
+  $('#btn-clear-mq').addEventListener('click', ()=>{ $('#mq-q').value=''; });
+  $('#btn-clear-mqa').addEventListener('click', ()=>{ $('#mq-a').value=''; });
 }
 async function loadQA(){
   const wrap=$('#qa-area'); wrap.innerHTML='<div class="spinner">読み込み中…</div>';
   try{
     const list=await call('getQA');
-    if(!list.length){wrap.innerHTML='<div class="empty">質問がありません</div>'; return;}
-    wrap.innerHTML=list.map(x=>`
-      <div class="qa" data-no="${esc(x.no)}">
-        <div class="q"><span class="qno">No.${esc(x.no)}</span>${esc(x.q)}</div>
-        <div class="a ${x.a?'':'none'}">${x.a?esc(x.a):'未回答（タップで回答を追加）'}</div>
+    const header=`
+      <div class="logitem logheader">
+        <div class="logtime">No.</div>
+        <div class="logbody"><div class="act">質問・回答</div></div>
+      </div>`;
+    if(!list.length){wrap.innerHTML=header+'<div class="empty">質問がありません</div>'; return;}
+    wrap.innerHTML=header+list.map(x=>`
+      <div class="logitem qa" data-no="${esc(x.no)}">
+        <div class="logtime">${esc(x.no)}</div>
+        <div class="logbody">
+          <div class="act">${esc(x.q)}</div>
+          <div class="note a ${x.a?'':'none'}">${x.a?esc(x.a):'未回答（タップで編集・回答）'}</div>
+        </div>
+        <span class="chev" aria-hidden="true">›</span>
       </div>`).join('');
     wrap.querySelectorAll('.qa').forEach(el=>{
       el.addEventListener('click',()=>{
         const no=el.dataset.no;
         const item=list.find(y=>String(y.no)===String(no));
-        $('#mq-q').textContent='No.'+no+'　'+item.q;
+        $('#mq-no').textContent='No.'+no;
+        $('#mq-q').value=item.q;
         $('#mq-a').value=item.a||'';
         $('#modal-qa').classList.add('show');
+        const modalBtns=()=>[$('#mq-save'), $('#mq-del'), $('#mq-cancel')];
         $('#mq-save').onclick=async ()=>{
-          const ok=await runWithButton($('#mq-save'), {loading:'保存中…', done:'保存しました ✓'}, async ()=>{
-            const r=await call('updateAnswer', no, $('#mq-a').value);
+          const q=$('#mq-q').value.trim();
+          if(!q){ toast('質問を入力してください'); return; }
+          const btn=$('#mq-save');
+          const ok=await runWithButton(btn, {loading:'保存中…', done:'保存しました ✓'}, async ()=>{
+            const r=await call('updateQA', no, {q, a:$('#mq-a').value});
             if(!r.ok){ toast(r.error||'失敗'); return false; }
             return true;
-          }, [$('#mq-cancel')]);
+          }, modalBtns().filter(b=>b!==btn));
           if(ok){ $('#modal-qa').classList.remove('show'); toast('保存しました'); loadQA(); }
+        };
+        $('#mq-del').onclick=async ()=>{
+          if(!confirm('この質問を削除しますか？\nNo.'+no+'　'+item.q)) return;
+          const btn=$('#mq-del');
+          const ok=await runWithButton(btn, {loading:'削除中…', done:'削除しました ✓'}, async ()=>{
+            const r=await call('deleteQA', no);
+            if(!r.ok){ toast(r.error||'失敗'); return false; }
+            return true;
+          }, modalBtns().filter(b=>b!==btn));
+          if(ok){ $('#modal-qa').classList.remove('show'); toast('削除しました'); loadQA(); }
         };
       });
     });

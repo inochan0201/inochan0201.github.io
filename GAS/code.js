@@ -105,14 +105,66 @@ function genId_() {
     '-' + Math.floor(Math.random() * 1e12);
 }
 
+/* ===== ショートカット（マスタ） ===== */
+const SHEET_SHORTCUT = 'マスタ';
+
+/** マスタシートが無い・空のときに使う初期値 */
+const DEFAULT_SHORTCUTS = [
+  { name: 'ワン' }, { name: 'ツー' }, { name: 'ごはん' }, { name: '水' },
+  { name: '散歩', ask: true, max: 120 },
+  { name: '夢中作り', ask: true, max: 60 },
+  { name: '仰向け抱っこ', ask: true, max: 60 },
+  { name: '歯磨き' }, { name: '耳掃除' }, { name: '爪切り' }, { name: 'ブラッシング' },
+  { name: '病院' }, { name: 'ネクスガード' }, { name: 'カルドメック' }
+];
+
+/**
+ * 「マスタ」シートからショートカット一覧を読む。
+ * 見出し行（「項目名」または「表示名」を含む行）を上から探し、その次の行からをデータとして読む。
+ * 列: 項目名 / 分数を聞く（○なら分数選択を出す） / 最大分（5分刻みの上限。空欄は60）
+ * ※ シートの上のタイトル行や、右側のメモ列は無視される。
+ * シートが無い・読めない・有効な行が1つも無いときは DEFAULT_SHORTCUTS を返す。
+ */
+function getShortcuts_() {
+  try {
+    const sh = ss_().getSheetByName(SHEET_SHORTCUT);
+    if (!sh || sh.getLastRow() < 2) return DEFAULT_SHORTCUTS;
+    const values = sh.getDataRange().getValues();
+    const isNameHeader = x => ['項目名', '表示名'].indexOf(String(x).trim()) >= 0;
+    let hr = -1;
+    for (let r = 0; r < Math.min(values.length, 10); r++) {
+      if (values[r].some(isNameHeader)) { hr = r; break; }
+    }
+    if (hr < 0) return DEFAULT_SHORTCUTS;
+    const h = values[hr].map(x => String(x).trim());
+    const iName = h.findIndex(isNameHeader);
+    const iAsk = h.indexOf('分数を聞く'), iMax = h.indexOf('最大分');
+    const out = [], seen = {};
+    for (let r = hr + 1; r < values.length; r++) {
+      const name = String(values[r][iName] || '').trim();
+      if (!name || seen[name]) continue; // 空行・重複は無視
+      seen[name] = true;
+      const askVal = iAsk >= 0 ? values[r][iAsk] : '';
+      const ask = askVal === true || ['○', '〇', 'TRUE', 'true', '1'].indexOf(String(askVal).trim()) >= 0;
+      const max = iMax >= 0 ? Number(values[r][iMax]) : NaN;
+      out.push({ name: name, ask: ask, max: (max >= 5) ? Math.floor(max / 5) * 5 : 60 });
+    }
+    return out.length ? out : DEFAULT_SHORTCUTS;
+  } catch (e) {
+    return DEFAULT_SHORTCUTS;
+  }
+}
+
 /* ===== クライアントへ渡す初期情報 ===== */
 function getInit() {
+  const shortcuts = getShortcuts_();
+  const durations = {};
+  shortcuts.forEach(s => { if (s.ask) durations[s.name] = s.max || 60; });
   return {
     today: fmtDate_(new Date()),       // yyyy/MM/dd
     nowTime: fmtTimeNow_(),            // H:mm
-    presets: ['ワン', 'ツー', 'ごはん', '水', '散歩',
-              '夢中作り', '仰向け抱っこ', '歯磨き', '耳掃除', '爪切り', 'ブラッシング',
-              '病院', 'ネクスガード', 'カルドメック']
+    presets: shortcuts.map(s => s.name),
+    durations: durations               // 分数選択を出すショートカット名 → 最大分
   };
 }
 
@@ -357,7 +409,7 @@ function getWeights() {
     const d = normDate_(values[r][iDate]);
     const kg = values[r][iKg];
     if (!d || kg === '' || kg === null) continue;
-    out.push({ date: d, kg: Number(kg), note: String(values[r][iNote] || '') });
+    out.push({ date: d, kg: Number(kg), note: String(values[r][iNote] || ''), row: r + 1 });
   }
   out.sort((a, b) => parseDate_(a.date) - parseDate_(b.date));
   return out;
@@ -377,6 +429,51 @@ function addWeight(p) {
   rowObj['備考'] = p.note || '';
   const row = h.map(name => (name in rowObj) ? rowObj[name] : '');
   sh.appendRow(row);
+  return { ok: true };
+}
+
+/**
+ * 体重の更新・削除は「シートの行番号」で対象を特定する（体重シートにはIDがないため）。
+ * 並び替えや行の挿入で行がずれていた場合に別の行を書き換えないよう、
+ * expect = { date, kg } （画面で見えていた元の値）と一致するか確認してから実行する。
+ */
+function findWeightRow_(row, expect) {
+  const sh = sheet_(SHEET_WEIGHT);
+  row = Number(row);
+  if (!row || row < 2 || row > sh.getLastRow()) return { error: '対象が見つかりませんでした。再読み込みしてください' };
+  const h = headers_(sh);
+  const iDate = h.indexOf('計測日');
+  let iKg = h.findIndex(x => String(x).indexOf('体重') >= 0); if (iKg < 0) iKg = 1;
+  let iNote = h.indexOf('備考'); if (iNote < 0) iNote = 2;
+  const cur = sh.getRange(row, 1, 1, sh.getLastColumn()).getValues()[0];
+  if (expect) {
+    const sameDate = normDate_(cur[iDate]) === normDate_(expect.date);
+    const sameKg = Number(cur[iKg]) === Number(expect.kg);
+    if (!sameDate || !sameKg) return { error: 'データが変更されています。再読み込みしてください' };
+  }
+  return { sh, row, iDate, iKg, iNote };
+}
+
+/** 体重を更新。p = { date, kg, note } */
+function updateWeight(row, p, expect) {
+  p = p || {};
+  if (p.kg === '' || p.kg === null || p.kg === undefined || isNaN(Number(p.kg))) {
+    return { ok: false, error: '体重(数値)を入力してください' };
+  }
+  const t = findWeightRow_(row, expect);
+  if (t.error) return { ok: false, error: t.error };
+  const dateObj = p.date ? parseDate_(p.date) : new Date();
+  t.sh.getRange(t.row, t.iDate + 1).setValue(fmtDate_(dateObj));
+  t.sh.getRange(t.row, t.iKg + 1).setValue(Number(p.kg));
+  t.sh.getRange(t.row, t.iNote + 1).setValue(p.note || '');
+  return { ok: true };
+}
+
+/** 体重の記録を行ごと削除 */
+function deleteWeight(row, expect) {
+  const t = findWeightRow_(row, expect);
+  if (t.error) return { ok: false, error: t.error };
+  t.sh.deleteRow(t.row);
   return { ok: true };
 }
 
@@ -452,6 +549,40 @@ function updateAnswer(no, answer) {
   for (let r = 1; r < values.length; r++) {
     if (String(values[r][iNo]) === String(no)) {
       sh.getRange(r + 1, iA + 1).setValue(answer || '');
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: '対象が見つかりませんでした' };
+}
+
+/** 質問と回答をまとめて更新（No一致行）。p = { q, a } */
+function updateQA(no, p) {
+  p = p || {};
+  const q = String(p.q || '').trim();
+  if (!q) return { ok: false, error: '質問を入力してください' };
+  const sh = sheet_(SHEET_QA);
+  const values = sh.getDataRange().getValues();
+  const h = values[0];
+  const iNo = h.indexOf('No'), iQ = h.indexOf('質問'), iA = h.indexOf('回答');
+  for (let r = 1; r < values.length; r++) {
+    if (String(values[r][iNo]) === String(no)) {
+      sh.getRange(r + 1, iQ + 1).setValue(q);
+      sh.getRange(r + 1, iA + 1).setValue(p.a || '');
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: '対象が見つかりませんでした' };
+}
+
+/** 質問を行ごと削除（No一致行） */
+function deleteQA(no) {
+  const sh = sheet_(SHEET_QA);
+  const values = sh.getDataRange().getValues();
+  const h = values[0];
+  const iNo = h.indexOf('No'), iQ = h.indexOf('質問');
+  for (let r = 1; r < values.length; r++) {
+    if (String(values[r][iNo]) === String(no) && String(values[r][iQ] || '').trim() !== '') {
+      sh.deleteRow(r + 1);
       return { ok: true };
     }
   }
