@@ -475,7 +475,7 @@
     <button class="btn" id="btn-save">この内容で記録する</button>
   </div>
   <div class="card">
-    <h2>最近の記録（直近20件）</h2>
+    <h2>最近の記録</h2>
     <div id="today-list"><div class="spinner">読み込み中…</div></div>
   </div>
 </section>
@@ -919,14 +919,29 @@ function round10(hhmm){
   return ('0'+h).slice(-2)+':'+('0'+m).slice(-2);
 }
 
-async function loadToday(){
-  const wrap=$('#today-list'); wrap.innerHTML='<div class="spinner">読み込み中…</div>';
+let todayDays=2;   // 記録タブに出す日数（「前の日を表示」で1日ずつ増やす）
+async function loadToday(silent){
+  const wrap=$('#today-list');
+  // 「前の日を表示」のときはスピナーに差し替えない（差し替えるとスクロール位置が飛ぶ）
+  if(!silent) wrap.innerHTML='<div class="spinner">読み込み中…</div>';
   try{
-    // 日付の条件なしで、最新の記録を新しい順に20件だけ取得する
-    const logs=await call('getRecentLogs', 20);
-    wrap.innerHTML = renderLogs(logs, true); // 複数日にまたがるので日付も表示
+    // 記録がある直近 todayDays 日分を、日付ごとに全件取得する
+    const r=await call('getLogsDays', todayDays);
+    wrap.innerHTML = renderLogs(r.logs, true) // 複数日にまたがるので日付も表示
+      + (r.hasMore ? '<button class="btn ghost" id="today-more">前の日を表示</button>' : '');
     bindLogItemButtons(wrap, ()=>loadToday());
-  }catch(e){wrap.innerHTML='<div class="empty">読み込み失敗：'+esc(e.message||e)+'</div>';}
+    const more=$('#today-more');
+    if(more) more.addEventListener('click', async ()=>{
+      await runWithButton(more, {loading:'読み込み中…', done:'表示しました ✓'}, async ()=>{
+        todayDays += 1;
+        try{ await loadToday(true); return true; }
+        catch(e){ todayDays -= 1; throw e; }
+      });
+    });
+  }catch(e){
+    if(silent){ toast('読み込み失敗：'+(e.message||e)); throw e; }   // 表示済みの一覧は消さない
+    wrap.innerHTML='<div class="empty">読み込み失敗：'+esc(e.message||e)+'</div>';
+  }
 }
 
 /* ---------- 一覧タブ ---------- */

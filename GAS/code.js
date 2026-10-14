@@ -203,8 +203,10 @@ function getLogsByDate_(dateStr) {
   while (true) {
     const numRows = Math.min(chunk, lastRow - 1);
     values = sh.getRange(2, 1, numRows, lastCol).getValues();
-    const found = values.some(row => normDate_(row[iDatetime]) === target);
-    if (found || numRows === lastRow - 1) break; // 見つかった、またはシート全体を読みきった
+    // シートは日時降順。読んだ範囲の最後の行が対象日より古ければ、その日の分は全部読めている。
+    // （対象日の行が1行でも見つかった時点で止めると、1日分がチャンクをまたぐとき古い時間帯が欠ける）
+    const lastDate = normDate_(values[values.length - 1][iDatetime]);
+    if (numRows === lastRow - 1 || (lastDate && lastDate < target)) break;
 
     if (firstPass) {
       // シートは日時降順（上ほど新しい）に保たれているので、先頭行の日付より
@@ -231,6 +233,60 @@ function getLogsByDate_(dateStr) {
   }
   out.sort((a, b) => timeKey_(b.time) - timeKey_(a.time));
   return out;
+}
+
+/**
+ * 記録がある直近 n 日分を、日付ごとに途中で切れないよう全件返す（記録タブ用）。
+ * 戻り値: { logs: [...新しい順], hasMore: それより前の日の記録がまだあるか }
+ * 記録シートは日時降順に保たれているので、先頭から読み、(n+1)日目の行が出たところで打ち切る。
+ */
+function getLogsDays(n) {
+  n = Math.max(1, Math.floor(Number(n)) || 2);
+  const sh = sheet_(SHEET_LOG);
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return { logs: [], hasMore: false };
+  const lastCol = sh.getLastColumn();
+  const h = headers_(sh);
+  const iDatetime = h.indexOf('日時'), iDow = h.indexOf('曜日'),
+        iAct = h.indexOf('やったこと'), iNote = h.indexOf('備考'), iId = h.indexOf('ID');
+
+  let chunk = 60, values = [], dates = [];
+  while (true) {
+    const numRows = Math.min(chunk, lastRow - 1);
+    values = sh.getRange(2, 1, numRows, lastCol).getValues();
+    const seen = {};
+    dates = [];
+    values.forEach(r => {
+      const d = normDate_(r[iDatetime]);
+      if (d && !seen[d]) { seen[d] = true; dates.push(d); }
+    });
+    dates.sort().reverse();
+    // (n+1)日目の日付が見えていれば、n日目までは途中で切れていない
+    if (dates.length > n || numRows === lastRow - 1) break;
+    chunk *= 4;
+  }
+  const hasMore = dates.length > n;
+  const keep = {};
+  dates.slice(0, n).forEach(d => { keep[d] = true; });
+
+  const out = [];
+  for (let i = 0; i < values.length; i++) {
+    const d = normDate_(values[i][iDatetime]);
+    if (!d || !keep[d]) continue;
+    out.push({
+      id: String(values[i][iId] || ''),
+      date: d,
+      dow: String(values[i][iDow] || ''),
+      time: normTime_(values[i][iDatetime]),
+      action: String(values[i][iAct] || ''),
+      note: String(values[i][iNote] || '')
+    });
+  }
+  out.sort((a, b) => {
+    const diff = parseDate_(b.date) - parseDate_(a.date);
+    return diff !== 0 ? diff : (timeKey_(b.time) - timeKey_(a.time));
+  });
+  return { logs: out, hasMore: hasMore };
 }
 
 /**
