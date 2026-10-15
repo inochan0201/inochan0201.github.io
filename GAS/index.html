@@ -21,8 +21,9 @@
     --c-delete: #c0563f;   /* 削除（--danger と同じ） */
     --chip: #f3f3f3;
     --hd-bg: #dbe5ee;   /* ヘッダー・表ヘッダーの背景（薄い青グレー） */
-    --r-sm: 0.25rem;
-    --r-md: 0.25rem;
+    --field: #f2f3f5;   /* 入力欄・ショートカット・サブボタンの塗り */
+    --r-sm: 0.5rem;
+    --r-md: 0.5rem;
     --r-full: 999px;
   }
   * {
@@ -122,10 +123,10 @@
   }
   label {
     display: block;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     color: var(--sub);
-    font-weight: 600;
-    margin: 0.875rem 0 0.125rem;
+    font-weight: 700;
+    margin: 1rem 0 0.375rem;
   }
   label:first-of-type {
     margin-top: 0;
@@ -136,25 +137,44 @@
   }
   input, textarea, select {
     width: 100%;
-    padding: 0.5rem 0.125rem;
-    border: none;
-    border-bottom: 0.0625rem solid var(--line-strong);
-    border-radius: 0;
+    padding: 0.625rem 0.75rem;
+    min-height: 2.75rem;
+    border: 0.0625rem solid transparent;
+    border-radius: var(--r-sm);
     font-size: 0.9375rem;
     font-weight: 400;
     font-family: inherit;
-    background: transparent;
+    background: var(--field);
     color: var(--txt);
-    transition: border-color .15s, box-shadow .15s;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  /* 標準の見た目を消して、矢印・アイコンを控えめに差し替える */
+  select {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7785' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.125rem;
+  }
+  input[type=date] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type=date]::-webkit-calendar-picker-indicator {
+    opacity: .45;
+    cursor: pointer;
   }
   input.invalid, textarea.invalid {
-    border-bottom: 0.125rem solid var(--danger);
-    padding-bottom: calc(0.5rem - 0.0625rem);
+    border-color: var(--danger);
+    box-shadow: 0 0 0 0.1875rem rgba(192, 86, 63, .15);
   }
   input:focus, textarea:focus, select:focus {
     outline: none;
-    border-bottom-color: var(--txt);
-    box-shadow: 0 0.0625rem 0 var(--txt);
+    background-color: #fff;
+    border-color: var(--txt);
+    box-shadow: 0 0 0 0.1875rem rgba(31, 45, 61, .1);
   }
   input::placeholder, textarea::placeholder {
     color: var(--sub);
@@ -162,7 +182,7 @@
     font-weight: 400;
   }
   textarea {
-    resize: vertical;
+    resize: none;
     min-height: 2.75rem;
   }
   .row {
@@ -180,10 +200,11 @@
     margin-top: 0.25rem;
   }
   .chip {
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.875rem;
     border-radius: var(--r-sm);
-    background: transparent;
-    border: 0.0625rem solid var(--line-strong);
+    background: var(--field);
+    border: 0.0625rem solid transparent;
+    font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
     user-select: none;
@@ -192,7 +213,6 @@
   .chip.on {
     background: var(--accent);
     color: #fff;
-    border-color: var(--accent);
   }
   button {
     font-family: inherit;
@@ -211,9 +231,12 @@
     margin-top: 0.75rem;
   }
   .btn.ghost {
-    background: transparent;
-    color: var(--accent);
-    border: 0.0625rem solid var(--accent);
+    background: var(--field);
+    color: var(--txt);
+    font-weight: 600;
+  }
+  .btn.ghost:active {
+    background: #e6e8eb;
   }
   .btn {
     transition: background .15s, opacity .15s, transform .08s;
@@ -389,8 +412,8 @@
     width: 2.5rem;
     flex: none;
     padding: 0.625rem 0;
-    border: 0.0625rem solid var(--line-strong);
-    background: transparent;
+    border: none;
+    background: var(--field);
     border-radius: var(--r-sm);
     font-size: 1rem;
     cursor: pointer;
