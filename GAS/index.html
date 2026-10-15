@@ -7,16 +7,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #f4f6f8;
+    --bg: #e6e8eb;   /* セクションの隙間に見える背景（薄い青みの灰色） */
     --card: #fff;
-    --line: #e2e6ea;
+    --line: #e3e3e3;
+    --line-strong: #bdbdbd;   /* 入力欄の下線・ショートカットの枠 */
     --txt: #1f2d3d;
     --sub: #6b7785;
     --accent: #1f2d3d;
     --danger: #c0563f;
-    --chip: #eef0f3;
-    --r-sm: 0.5rem;
-    --r-md: 0.75rem;
+    /* 操作の種類ごとの色（CRUD）。ボタンだけに使い、ほかは白黒で統一する */
+    --c-create: #2e7d6b;   /* 作成：記録する・追加する */
+    --c-update: #2f5fa7;   /* 更新：保存 */
+    --c-delete: #c0563f;   /* 削除（--danger と同じ） */
+    --chip: #f3f3f3;
+    --hd-bg: #dbe5ee;   /* ヘッダー・表ヘッダーの背景（薄い青グレー） */
+    --r-sm: 0.25rem;
+    --r-md: 0.25rem;
     --r-full: 999px;
   }
   * {
@@ -35,30 +41,75 @@
     position: sticky;
     top: 0;
     z-index: 5;
-    background: var(--accent);
-    color: #fff;
-    padding: 0.75rem 1rem;
-    font-weight: 700;
-    font-size: 1.0625rem;
+    background: var(--hd-bg);
+    color: var(--txt);
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    box-shadow: 0 0.0625rem 0.25rem rgba(31, 45, 61, .12);
+  }
+  header .hd-ic {
+    width: 2.875rem;
+    height: 2.875rem;
+    flex: none;
+  }
+  header .hd-t {
+    line-height: 1.15;
+  }
+  header .hd-t b {
+    font-weight: 800;
+    font-size: 1.125rem;
+    letter-spacing: 0.04em;
   }
   header small {
-    font-weight: 400;
-    color: rgba(255, 255, 255, .75);
+    display: block;
+    font-weight: 600;
+    font-size: 0.6875rem;
+    color: var(--sub);
+    margin-top: 0.0625rem;
+  }
+  header .hd-r {
+    margin-left: auto;
+    text-align: right;
+    line-height: 1.2;
+  }
+  header .hd-r b {
+    display: block;
+    font-size: 1.0625rem;
+    font-weight: 800;
+  }
+  header .hd-r small {
     font-size: 0.75rem;
-    margin-left: 0.25rem;
+    margin-top: 0;
+  }
+  .paw {
+    width: 0.8125rem;
+    height: 0.8125rem;
+    vertical-align: -0.0625rem;
+    color: var(--sub);
+  }
+  /* ブラックラブラドールの毛色 */
+  .pup {
+    --coat: #2c3038;
+    --ear: #1a1d22;
+    --muz: #454b55;
+    --nose: #0b0c0e;
+    --eye: #2a1b14;
+    --tongue: #e98a8a;
+    --brow: #5c636e;
   }
   .view {
     display: none;
-    padding: 0.875rem;
+    padding: 0;
   }
   .view.active {
     display: block;
   }
+  /* セクションは画面幅いっぱいの白い面にして、背景の灰色との差で区切る（枠・影・角丸なし） */
   .card {
     background: var(--card);
-    border: 0.0625rem solid var(--line);
-    border-radius: var(--r-md);
-    padding: 0.875rem;
+    padding: 1rem 0.875rem 1.25rem;
     margin-bottom: 0.75rem;
   }
   h2 {
@@ -71,10 +122,10 @@
   }
   label {
     display: block;
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: var(--sub);
-    font-weight: 800;
-    margin: 1rem 0 0.5rem;
+    font-weight: 600;
+    margin: 0.875rem 0 0.125rem;
   }
   label:first-of-type {
     margin-top: 0;
@@ -85,24 +136,25 @@
   }
   input, textarea, select {
     width: 100%;
-    padding: 0.625rem;
-    border: 0.0625rem solid var(--line);
-    border-radius: var(--r-sm);
+    padding: 0.5rem 0.125rem;
+    border: none;
+    border-bottom: 0.0625rem solid var(--line-strong);
+    border-radius: 0;
     font-size: 0.9375rem;
     font-weight: 400;
     font-family: inherit;
-    background: #fff;
+    background: transparent;
     color: var(--txt);
     transition: border-color .15s, box-shadow .15s;
   }
   input.invalid, textarea.invalid {
-    border-color: var(--txt);
-    box-shadow: 0 0 0 0.1875rem rgba(31, 45, 61, .18);
+    border-bottom: 0.125rem solid var(--danger);
+    padding-bottom: calc(0.5rem - 0.0625rem);
   }
   input:focus, textarea:focus, select:focus {
     outline: none;
-    border-color: var(--txt);
-    box-shadow: 0 0 0 0.1875rem rgba(31, 45, 61, .12);
+    border-bottom-color: var(--txt);
+    box-shadow: 0 0.0625rem 0 var(--txt);
   }
   input::placeholder, textarea::placeholder {
     color: var(--sub);
@@ -130,8 +182,8 @@
   .chip {
     padding: 0.5rem 0.75rem;
     border-radius: var(--r-sm);
-    background: var(--chip);
-    border: 0.0625rem solid var(--line);
+    background: transparent;
+    border: 0.0625rem solid var(--line-strong);
     font-size: 0.875rem;
     cursor: pointer;
     user-select: none;
@@ -159,7 +211,7 @@
     margin-top: 0.75rem;
   }
   .btn.ghost {
-    background: #fff;
+    background: transparent;
     color: var(--accent);
     border: 0.0625rem solid var(--accent);
   }
@@ -170,9 +222,9 @@
     opacity: .85;
     transform: scale(.98);
   }
-  .btn.danger {
-    background: var(--danger);
-  }
+  .btn.create { background: var(--c-create); }
+  .btn.update { background: var(--c-update); }
+  .btn.danger { background: var(--c-delete); }
   .btn:disabled {
     opacity: .7;
     cursor: default;
@@ -208,6 +260,10 @@
     box-shadow: inset 0 0 0 0.125rem var(--accent);
     opacity: 1;
   }
+  /* 完了時の反転は、その操作の色の枠・文字にする */
+  .btn.create.success { color: var(--c-create); box-shadow: inset 0 0 0 0.125rem var(--c-create); }
+  .btn.update.success { color: var(--c-update); box-shadow: inset 0 0 0 0.125rem var(--c-update); }
+  .btn.danger.success { color: var(--c-delete); box-shadow: inset 0 0 0 0.125rem var(--c-delete); }
   .logitem {
     display: flex;
     align-items: flex-start;
@@ -219,25 +275,25 @@
     border-top: none;
   }
   .logheader {
-    background: var(--accent);
-    color: #fff;
-    border-radius: 0.5rem;
+    background: var(--hd-bg);
+    color: var(--txt);
+    border-radius: var(--r-sm);
     padding: 0.5rem 0.75rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
   }
   .logheader .logtime {
-    color: #fff;
+    color: var(--txt);
     font-size: 0.6875rem;
     font-weight: 700;
     min-width: 3.25rem;
     padding-top: 0;
-    border-right-color: rgba(255, 255, 255, .4);
+    border-right-color: rgba(31, 45, 61, .25);
   }
   .logheader .logtime.wide {
     min-width: 4.625rem;
   }
   .logheader .act {
-    color: #fff;
+    color: var(--txt);
     font-size: 0.6875rem;
     font-weight: 700;
   }
@@ -333,8 +389,8 @@
     width: 2.5rem;
     flex: none;
     padding: 0.625rem 0;
-    border: 0.0625rem solid var(--line);
-    background: #fff;
+    border: 0.0625rem solid var(--line-strong);
+    background: transparent;
     border-radius: var(--r-sm);
     font-size: 1rem;
     cursor: pointer;
@@ -444,7 +500,38 @@
 </style>
 </head>
 <body>
-<header> PW手帳 <small id="hd-sub"></small></header>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="paw" viewBox="0 0 24 24" fill="currentColor"><ellipse cx="6.2" cy="10.2" rx="2.1" ry="2.7"/><ellipse cx="10.4" cy="6.1" rx="2.1" ry="2.8"/><ellipse cx="15.2" cy="6.1" rx="2.1" ry="2.8"/><ellipse cx="19.2" cy="10.2" rx="2.1" ry="2.7"/><path d="M12.8 11.2c-3.2 0-6.2 3.6-6.2 6.2 0 1.9 1.6 2.6 3.1 2.6 1.1 0 1.8-.5 3.1-.5s2 .5 3.1.5c1.5 0 3.1-.7 3.1-2.6 0-2.6-3-6.2-6.2-6.2z"/></symbol>
+    <!-- ブラックラブラドールの子犬（あごのせポーズ）。色は .pup のCSS変数 -->
+    <symbol id="pup" viewBox="0 0 64 64">
+      <ellipse cx="20.5" cy="58" rx="7.5" ry="4.6" fill="var(--coat)"/>
+      <ellipse cx="43.5" cy="58" rx="7.5" ry="4.6" fill="var(--coat)"/>
+      <path d="M17.5 56.5v3.2M21 56.2v3.8M24 56.5v3.2M40 56.5v3.2M43.5 56.2v3.8M47 56.5v3.2" stroke="var(--ear)" stroke-width="1" stroke-linecap="round" opacity=".7"/>
+      <path d="M18 13C8 14 4 30 8 43c2 6 10 5 12-2l4-23z" fill="var(--ear)"/>
+      <path d="M46 13c10 1 14 17 10 30-2 6-10 5-12-2l-4-23z" fill="var(--ear)"/>
+      <path d="M32 9c13 0 20 9 20 21 0 13-8 23-20 23S12 43 12 30C12 18 19 9 32 9z" fill="var(--coat)"/>
+      <ellipse cx="26" cy="17" rx="8" ry="3.6" fill="#fff" opacity=".10" transform="rotate(-18 26 17)"/>
+      <circle cx="16.5" cy="41" r="3.6" fill="#ff9aa8" opacity=".30"/><circle cx="47.5" cy="41" r="3.6" fill="#ff9aa8" opacity=".30"/>
+      <ellipse cx="32" cy="43.5" rx="9" ry="7" fill="var(--muz)"/>
+      <path d="M26.5 39.2c0-2.8 11-2.8 11 0 0 3-4 4.6-5.5 4.6s-5.5-1.6-5.5-4.6z" fill="var(--nose)"/>
+      <ellipse cx="30.2" cy="38.3" rx="1.8" ry=".7" fill="#fff" opacity=".45"/>
+      <path d="M32 43.5v1.6m0 0c-1.8 2.2-4.2 2-5.2.4m5.2-.4c1.8 2.2 4.2 2 5.2.4" fill="none" stroke="var(--nose)" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M30 47c0 3 4 3 4 0z" fill="var(--tongue)"/>
+      <ellipse cx="23.2" cy="30.5" rx="4.3" ry="4.7" fill="var(--eye)"/><ellipse cx="40.8" cy="30.5" rx="4.3" ry="4.7" fill="var(--eye)"/>
+      <ellipse cx="23.2" cy="30.5" rx="4.3" ry="4.7" fill="none" stroke="#6b4a36" stroke-width=".6" opacity=".6"/>
+      <ellipse cx="40.8" cy="30.5" rx="4.3" ry="4.7" fill="none" stroke="#6b4a36" stroke-width=".6" opacity=".6"/>
+      <circle cx="24.7" cy="28.6" r="1.7" fill="#fff"/><circle cx="42.3" cy="28.6" r="1.7" fill="#fff"/>
+      <circle cx="21.8" cy="32.6" r=".8" fill="#fff" opacity=".85"/><circle cx="39.4" cy="32.6" r=".8" fill="#fff" opacity=".85"/>
+      <path d="M18.5 23.2c2-1.6 5-1.8 7.2-.4M45.5 23.2c-2-1.6-5-1.8-7.2-.4" fill="none" stroke="var(--brow)" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+<header>
+  <svg class="hd-ic pup" aria-hidden="true"><use href="#pup"/></svg>
+  <div class="hd-t"><b>PW手帳 <svg class="paw" aria-hidden="true"><use href="#paw"/></svg></b><small id="hd-days"></small></div>
+  <div class="hd-r"><b id="hd-age"></b><small id="hd-weight"></small></div>
+</header>
 
 <!-- 記録 -->
 <section id="view-log" class="view active">
@@ -472,7 +559,7 @@
       <textarea id="log-note" placeholder="例：初めての場所で夢中作りできた！" style="padding-right:2.5rem;"></textarea>
       <button type="button" class="mini" id="btn-clear-note" aria-label="クリア" title="クリア" style="position:absolute;top:0.375rem;right:0.25rem;"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
     </div>
-    <button class="btn" id="btn-save">この内容で記録する</button>
+    <button class="btn create" id="btn-save">この内容で記録する</button>
   </div>
   <div class="card">
     <h2>最近の記録</h2>
@@ -538,7 +625,7 @@
       <input type="text" id="w-note" style="padding-right:2.5rem;">
       <button type="button" class="mini" id="btn-clear-wnote" aria-label="クリア" title="クリア" style="position:absolute;top:50%;right:0.25rem;transform:translateY(-50%);"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
     </div>
-    <button class="btn" id="btn-wsave">体重を記録する</button>
+    <button class="btn create" id="btn-wsave">体重を記録する</button>
   </div>
 </section>
 
@@ -550,7 +637,7 @@
       <textarea id="qa-new" placeholder="聞きたいことを入力" style="padding-right:2.5rem;"></textarea>
       <button type="button" class="mini" id="btn-clear-qanew" aria-label="クリア" title="クリア" style="position:absolute;top:0.375rem;right:0.25rem;"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
     </div>
-    <button class="btn" id="btn-qadd">質問を追加する</button>
+    <button class="btn create" id="btn-qadd">質問を追加する</button>
   </div>
   <div class="card">
     <h2>質問リスト</h2>
@@ -588,7 +675,7 @@
       <textarea id="m-note" style="padding-right:2.5rem;"></textarea>
       <button type="button" class="mini" id="btn-clear-mnote" aria-label="クリア" title="クリア" style="position:absolute;top:0.375rem;right:0.25rem;"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
     </div>
-    <button class="btn" id="m-save">保存</button>
+    <button class="btn update" id="m-save">保存</button>
     <button class="btn danger" id="m-del" style="margin-top:0.5rem;">削除</button>
     <button class="btn ghost" id="m-cancel" style="margin-top:0.5rem;">キャンセル</button>
   </div>
@@ -608,7 +695,7 @@
       <textarea id="mq-a" style="min-height:7.5rem;padding-right:2.5rem;"></textarea>
       <button type="button" class="mini" id="btn-clear-mqa" aria-label="クリア" title="クリア" style="position:absolute;top:0.375rem;right:0.25rem;"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
     </div>
-    <button class="btn" id="mq-save">保存</button>
+    <button class="btn update" id="mq-save">保存</button>
     <button class="btn danger" id="mq-del" style="margin-top:0.5rem;">削除</button>
     <button class="btn ghost" id="mq-cancel" style="margin-top:0.5rem;">キャンセル</button>
   </div>
@@ -630,7 +717,7 @@
       <input type="text" id="mw-note" style="padding-right:2.5rem;">
       <button type="button" class="mini" id="btn-clear-mwnote" aria-label="クリア" title="クリア" style="position:absolute;top:50%;right:0.25rem;transform:translateY(-50%);"><svg viewBox="0 0 24 24" style="width:1.375rem;height:1.375rem;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></button>
     </div>
-    <button class="btn" id="mw-save">保存</button>
+    <button class="btn update" id="mw-save">保存</button>
     <button class="btn danger" id="mw-del" style="margin-top:0.5rem;">削除</button>
     <button class="btn ghost" id="mw-cancel" style="margin-top:0.5rem;">キャンセル</button>
   </div>
@@ -696,6 +783,33 @@ async function runWithButton(btn, labels, task, lockBtns){
 }
 
 let INIT=null;
+
+/* ---------- ヘッダーの月齢・体重 ---------- */
+function parseYmd(s){
+  const m=String(s||'').match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+  return m?{y:Number(m[1]),m:Number(m[2]),d:Number(m[3])}:null;
+}
+/** 誕生日（INIT.birthday）と今日（INIT.today）から「2M3W」形式の月齢・週齢と「生後◯日」を出す。誕生日と同じ日付で月齢が1つ上がり、そこから7日ごとに週が増える */
+function renderHeaderInfo(){
+  const b=parseYmd(INIT.birthday), t=parseYmd(INIT.today);
+  if(b&&t){
+    const months=(t.y-b.y)*12+(t.m-b.m)-(t.d<b.d?1:0);
+    const days=Math.round((Date.UTC(t.y,t.m-1,t.d)-Date.UTC(b.y,b.m-1,b.d))/86400000);
+    if(months>=0&&days>=0){
+      // 直近の「月誕生日」からの経過日数 → 週数（月末日などで日付が存在しない月は月末に丸める）
+      const ay=b.y+Math.floor((b.m-1+months)/12), am=(b.m-1+months)%12;
+      const ad=Math.min(b.d,new Date(Date.UTC(ay,am+1,0)).getUTCDate());
+      const since=Math.round((Date.UTC(t.y,t.m-1,t.d)-Date.UTC(ay,am,ad))/86400000);
+      const weeks=Math.floor(since/7);
+      $('#hd-age').textContent=months+'M'+weeks+'W';
+      $('#hd-days').textContent='生後'+days+'日';
+    }
+  }
+  setHeaderWeight(INIT.latestWeight);
+}
+function setHeaderWeight(kg){
+  $('#hd-weight').textContent=(kg===undefined||kg===null||kg==='')?'':kg+'kg';
+}
 
 /* ---------- 「やったこと」欄 ⇔ チップ 同期まわり ----------
  * 記録タブの新規入力欄（#log-action）・一覧タブの編集モーダル（#m-act）など、
@@ -780,6 +894,8 @@ window.addEventListener('load', async ()=>{
   try{
     INIT = await call('getInit');
   }catch(e){ document.body.innerHTML='<p style="padding:1.25rem">読み込みに失敗しました：'+esc(e.message||e)+'</p>'; return; }
+
+  renderHeaderInfo();
 
   // 日付・時刻の初期値
   $('#log-date').value = toInputDate(INIT.today);
@@ -1184,6 +1300,7 @@ async function loadWeight(){
     WDATA=data;
     if(data.length){
       $('#w-latest').textContent=data[data.length-1].kg;
+      setHeaderWeight(data[data.length-1].kg);
       $('#w-latest-diff').textContent = data.length>1 ? '前回比 '+fmtDiff(data[data.length-1].kg-data[data.length-2].kg) : '';
     }else{
       $('#w-latest').textContent='–'; $('#w-latest-diff').textContent='';

@@ -1,6 +1,7 @@
 const SHEET_LOG = '記録';
 const SHEET_WEIGHT = '体重';
 const SHEET_QA = '質問';
+const BIRTHDAY = '2026/07/21';   // 誕生日（ヘッダーの月齢表示に使う）
 
 /* ===== Webアプリのエントリポイント ===== */
 function doGet() {
@@ -160,7 +161,12 @@ function getInit() {
   const shortcuts = getShortcuts_();
   const durations = {};
   shortcuts.forEach(s => { if (s.ask) durations[s.name] = s.max || 60; });
+  // ヘッダーに出す最新の体重（体重シートが読めなくても起動は止めない）
+  let latestWeight = null;
+  try { const w = getWeights(); if (w.length) latestWeight = w[w.length - 1].kg; } catch (e) {}
   return {
+    birthday: BIRTHDAY,                // yyyy/MM/dd
+    latestWeight: latestWeight,
     today: fmtDate_(new Date()),       // yyyy/MM/dd
     nowTime: fmtTimeNow_(),            // H:mm
     presets: shortcuts.map(s => s.name),
