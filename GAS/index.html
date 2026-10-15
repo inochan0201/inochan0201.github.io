@@ -20,7 +20,9 @@
     --c-update: #2f5fa7;   /* 更新：保存 */
     --c-delete: #c0563f;   /* 削除（--danger と同じ） */
     --chip: #f3f3f3;
-    --hd-bg: #dbe5ee;   /* ヘッダー・表ヘッダーの背景（薄い青グレー） */
+    --hd-bg: #1f2d3d;   /* ヘッダー・表ヘッダーの背景（濃いネイビー） */
+    --on-hd: #fff;   /* 上の背景に載せる文字 */
+    --on-hd-sub: rgba(255, 255, 255, .7);
     --field: #f2f3f5;   /* 入力欄・ショートカット・サブボタンの塗り */
     --r-sm: 0.5rem;
     --r-md: 0.5rem;
@@ -43,7 +45,7 @@
     top: 0;
     z-index: 5;
     background: var(--hd-bg);
-    color: var(--txt);
+    color: var(--on-hd);
     padding: 0.5rem 1rem;
     display: flex;
     align-items: center;
@@ -54,6 +56,10 @@
     width: 2.875rem;
     height: 2.875rem;
     flex: none;
+    /* 黒ラブが濃い背景に埋もれないよう、薄い丸の上に置く */
+    background: #dbe5ee;
+    border-radius: 50%;
+    padding: 0.125rem;
   }
   header .hd-t {
     line-height: 1.15;
@@ -67,7 +73,7 @@
     display: block;
     font-weight: 600;
     font-size: 0.6875rem;
-    color: var(--sub);
+    color: var(--on-hd-sub);
     margin-top: 0.0625rem;
   }
   header .hd-r {
@@ -80,6 +86,17 @@
     font-size: 1.0625rem;
     font-weight: 800;
   }
+  header .hd-r .n {
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  header .hd-r .u {
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-left: 0.2rem;
+    color: var(--on-hd-sub);
+  }
   header .hd-r small {
     font-size: 0.75rem;
     margin-top: 0;
@@ -88,7 +105,7 @@
     width: 0.8125rem;
     height: 0.8125rem;
     vertical-align: -0.0625rem;
-    color: var(--sub);
+    color: var(--on-hd-sub);
   }
   /* ブラックラブラドールの毛色 */
   .pup {
@@ -299,24 +316,24 @@
   }
   .logheader {
     background: var(--hd-bg);
-    color: var(--txt);
+    color: var(--on-hd);
     border-radius: var(--r-sm);
     padding: 0.5rem 0.75rem;
     margin-bottom: 0.25rem;
   }
   .logheader .logtime {
-    color: var(--txt);
+    color: var(--on-hd);
     font-size: 0.6875rem;
     font-weight: 700;
     min-width: 3.25rem;
     padding-top: 0;
-    border-right-color: rgba(31, 45, 61, .25);
+    border-right-color: rgba(255, 255, 255, .3);
   }
   .logheader .logtime.wide {
     min-width: 4.625rem;
   }
   .logheader .act {
-    color: var(--txt);
+    color: var(--on-hd);
     font-size: 0.6875rem;
     font-weight: 700;
   }
@@ -552,8 +569,8 @@
 </svg>
 <header>
   <svg class="hd-ic pup" aria-hidden="true"><use href="#pup"/></svg>
-  <div class="hd-t"><b>PW手帳 <svg class="paw" aria-hidden="true"><use href="#paw"/></svg></b><small id="hd-days"></small></div>
-  <div class="hd-r"><b id="hd-age"></b><small id="hd-weight"></small></div>
+  <div class="hd-t"><b>PW手帳 <svg class="paw" aria-hidden="true"><use href="#paw"/></svg></b><small id="hd-weight"></small></div>
+  <div class="hd-r"><b id="hd-age"></b><small id="hd-days"></small></div>
 </header>
 
 <!-- 記録 -->
@@ -626,11 +643,9 @@
   <div class="card">
     <div class="wmeta"><h2 style="margin:0;">体重の推移</h2><div style="text-align:right;"><div><span class="wbig" id="w-latest">–</span> kg</div><div id="w-latest-diff" style="font-size:0.8125rem;color:var(--sub);"></div></div></div>
     <canvas id="w-chart" height="220"></canvas>
-    <div style="font-size:0.75rem;color:var(--sub);margin-top:0.5rem;">グラフのどこかをタップすると、その日の体重が表示されます</div>
   </div>
   <div class="card">
     <h2>一覧</h2>
-    <div style="font-size:0.75rem;color:var(--sub);margin:-0.25rem 0 0.5rem;">行をタップすると編集・削除できます</div>
     <div id="w-list"><div class="spinner">読み込み中…</div></div>
     <button class="btn ghost" id="w-more" style="margin-top:0.5rem;display:none;">さらに表示</button>
   </div>
@@ -812,19 +827,14 @@ function parseYmd(s){
   const m=String(s||'').match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
   return m?{y:Number(m[1]),m:Number(m[2]),d:Number(m[3])}:null;
 }
-/** 誕生日（INIT.birthday）と今日（INIT.today）から「2M3W」形式の月齢・週齢と「生後◯日」を出す。誕生日と同じ日付で月齢が1つ上がり、そこから7日ごとに週が増える */
+/** 誕生日（INIT.birthday）と今日（INIT.today）から「◯ヶ月」（数字を大きく・単位を小さく）と「生後◯日」を出す。月齢は満で数え、誕生日と同じ日付で1つ上がる */
 function renderHeaderInfo(){
   const b=parseYmd(INIT.birthday), t=parseYmd(INIT.today);
   if(b&&t){
     const months=(t.y-b.y)*12+(t.m-b.m)-(t.d<b.d?1:0);
     const days=Math.round((Date.UTC(t.y,t.m-1,t.d)-Date.UTC(b.y,b.m-1,b.d))/86400000);
     if(months>=0&&days>=0){
-      // 直近の「月誕生日」からの経過日数 → 週数（月末日などで日付が存在しない月は月末に丸める）
-      const ay=b.y+Math.floor((b.m-1+months)/12), am=(b.m-1+months)%12;
-      const ad=Math.min(b.d,new Date(Date.UTC(ay,am+1,0)).getUTCDate());
-      const since=Math.round((Date.UTC(t.y,t.m-1,t.d)-Date.UTC(ay,am,ad))/86400000);
-      const weeks=Math.floor(since/7);
-      $('#hd-age').textContent=months+'M'+weeks+'W';
+      $('#hd-age').innerHTML='<span class="n">'+months+'</span><span class="u">ヶ月</span>';
       $('#hd-days').textContent='生後'+days+'日';
     }
   }
